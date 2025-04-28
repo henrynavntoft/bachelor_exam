@@ -18,7 +18,7 @@ router.get('/', authenticateJWT(['ADMIN']), requireAdmin, async (req: Authentica
 });
 
 // Get a single user by ID
-router.get('/:id', (async (req: Request, res: Response) => {
+router.get('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const user = await prisma.user.findUnique({ where: { id } });
@@ -33,7 +33,7 @@ router.get('/:id', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // Update a user
-router.put('/:id', (async (req: Request, res: Response) => {
+router.put('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Request, res: Response) => {
     const { id } = req.params;
     const { firstName, lastName, email } = req.body;
     try {
@@ -49,10 +49,13 @@ router.put('/:id', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // Delete a user
-router.delete('/:id', (async (req: Request, res: Response) => {
+router.delete('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
-        await prisma.user.delete({ where: { id } });
+        await prisma.user.update({
+            where: { id },
+            data: { isDeleted: true }
+        });
         res.status(204).send();
     } catch (error) {
         console.error('Error deleting user:', error);

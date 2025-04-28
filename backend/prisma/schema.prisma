@@ -33,7 +33,7 @@ model User {
   attendingEvents Attendee[] // guests attending events
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
-  deletedAt       DateTime?
+  isDeleted       Boolean    @default(false)
 }
 
 model Event {
@@ -48,7 +48,7 @@ model Event {
   attendees   Attendee[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  deletedAt   DateTime?
+  isDeleted   Boolean    @default(false)
 }
 
 model Attendee {

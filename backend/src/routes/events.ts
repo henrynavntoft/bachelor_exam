@@ -1,6 +1,7 @@
 import { Router, Request, Response, RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
-
+import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { requireHost } from '../middleware/adminMiddleware';
 const prisma = new PrismaClient();
 const router = Router();
 
@@ -31,11 +32,14 @@ router.get('/:id', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // Create a new event
-router.post('/', (async (req: Request, res: Response) => {
-    const { title, description, images, date, location, hostId } = req.body;
+router.post('/', authenticateJWT(['HOST']), requireHost, (async (req: AuthenticatedRequest, res: Response) => {
+    const { title, description, images, date, location } = req.body;
     try {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
         const event = await prisma.event.create({
-            data: { title, description, images, date: new Date(date), location, hostId },
+            data: { title, description, images, date: new Date(date), location, hostId: req.user.userId },
         });
         res.status(201).json(event);
     } catch (error) {
@@ -45,15 +49,22 @@ router.post('/', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // Update an event
-router.put('/:id', (async (req: Request, res: Response) => {
+router.put('/:id', authenticateJWT(['HOST']), requireHost, (async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { title, description, images, date, location } = req.body;
     try {
-        const event = await prisma.event.update({
+        const event = await prisma.event.findUnique({ where: { id } });
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        if (event.hostId !== req.user?.userId) {
+            return res.status(403).json({ message: 'Forbidden: You can only update your own events.' });
+        }
+        const updatedEvent = await prisma.event.update({
             where: { id },
             data: { title, description, images, date: new Date(date), location },
         });
-        res.status(200).json(event);
+        res.status(200).json(updatedEvent);
     } catch (error) {
         console.error('Error updating event:', error);
         res.status(500).json({ message: 'Failed to update event' });
@@ -61,9 +72,16 @@ router.put('/:id', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // Delete an event
-router.delete('/:id', (async (req: Request, res: Response) => {
+router.delete('/:id', authenticateJWT(['HOST']), requireHost, (async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     try {
+        const event = await prisma.event.findUnique({ where: { id } });
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found' });
+        }
+        if (event.hostId !== req.user?.userId) {
+            return res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
+        }
         await prisma.event.delete({ where: { id } });
         res.status(204).send();
     } catch (error) {
