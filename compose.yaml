@@ -10,6 +10,8 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:4000
       - RTE=${RTE}
+    env_file:
+      - ./frontend/.env.${RTE}
     restart: always
     depends_on:
       - backend
