@@ -14,6 +14,6 @@ const Card = ({ id, name, email }: CardProps) => {
       <p>{email}</p>
     </div>
   );
-};  
+};
 
 export default Card;
