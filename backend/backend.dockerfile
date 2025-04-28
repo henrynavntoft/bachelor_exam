@@ -14,4 +14,4 @@ COPY . .
 
 EXPOSE 4000
 
-CMD ["npm", "run", "dev"]
+ENTRYPOINT ["sh", "entrypoint.sh"]
