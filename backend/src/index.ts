@@ -1,124 +1,62 @@
-import express from 'express';
-import bcrypt from 'bcrypt';
-import type { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+import express, { Express, Request, Response, NextFunction } from 'express';
+import helmet from 'helmet';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
 
-const prisma = new PrismaClient();
+import userRoutes from '../src/routes/users';
+import eventRoutes from '../src/routes/events';
+import authRoutes from '../src/routes/auth';
 
-const app = express();
-const port = process.env.PORT || 4000;
+dotenv.config({ path: './.env' });
 
+const app: Express = express();
+
+// Middlewares
+app.use(rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 1000,
+  handler: (req, res) => {
+    res.status(429).json({ error: 'Too many requests, please try again later.' });
+  },
+}));
+app.use(helmet());
+app.use(morgan('dev'));
+app.use(cookieParser());
 app.use(express.json());
+
+const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || '*';
+
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: allowedOrigins,
+  credentials: true,
 }));
 
-app.get('/', (req, res) => {
-  res.send('Hello TypeScript Express!');
+// Routes
+app.get('/', (req: Request, res: Response) => {
+  res.send('Meet & Greet Backend Running');
 });
 
-// test api 
-app.get('/test', async (req, res) => {
-  try {
-    res.status(200).json({ message: 'Hello World' });
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      res.status(500).json({ message: error.message });
-    } else {
-      res.status(500).json({ message: 'An unknown error occurred' });
-    }
-  }
-});
+app.use('/api/users', userRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/auth', authRoutes);
 
-// Get all users
-app.get('/users', async (req, res) => {
-  try {
-    const users = await prisma.user.findMany();
-    res.status(200).json(users);
-  } catch (error: unknown) {
-    console.error('Error fetching users:', error);
-    res.status(500).json({ message: 'Failed to fetch users' });
-  }
-});
-
-// Get a single user by id
-app.get('/users/:id', (async (req, res) => {
-  const id = req.params.id;
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-    });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.status(200).json(user);
-  } catch (error: unknown) {
-    console.error('Error fetching user:', error);
-    res.status(500).json({ message: 'Failed to fetch user' });
-  }
-}) as RequestHandler);
-
-// Create a new user
-app.post('/users', (async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
-
-  if (!firstName || !lastName || !email || !password) {
-    return res.status(400).json({ message: 'Missing required fields' });
-  }
-
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        hashedPassword,
-      },
-    });
-
-    res.status(201).json(user);
-  } catch (error: unknown) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ message: 'Failed to create user' });
-  }
-}) as RequestHandler);
-
-// Update a user
-app.put('/users/:id', (async (req, res) => {
-  const { id } = req.params;
-  const { firstName, lastName, email } = req.body;
-  try {
-    const user = await prisma.user.update({
-      where: { id },
-      data: { firstName, lastName, email },
-    });
-    res.status(200).json(user);
-  } catch (error: unknown) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Failed to update user' });
-  }
-}) as RequestHandler);
-
-// Delete a user
-app.delete('/users/:id', (async (req, res) => {
-  const { id } = req.params;
-  try {
-    await prisma.user.delete({
-      where: { id },
-    });
-    res.status(204).json({ message: 'User deleted successfully' });
-  } catch (error: unknown) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ message: 'Failed to delete user' });
-  }
-}) as RequestHandler);
+////////////////////////////////////////////////////////////////////////////////////////
+// Global error handler
+export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
+  console.error('Error:', err.message);
+  res.status(500).json({
+    message: 'Internal Server Error',
+    error: process.env.NODE_ENV === 'dev' ? err.message : undefined,
+  });
+  next();
+}
 
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+// Server
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
