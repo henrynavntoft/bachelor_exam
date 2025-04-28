@@ -7,18 +7,23 @@
     "dev": "nodemon --watch 'src/**/*.ts' --exec ts-node src/index.ts",
     "lint": "eslint ."
   },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.6.0",
+    "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "prisma": "^6.6.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
+    "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/node": "^22.14.1",
