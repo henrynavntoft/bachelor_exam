@@ -25,9 +25,9 @@ app.get('/test', async (req, res) => {
     res.status(200).json({ message: 'Hello World' });
   } catch (error: unknown) {
     if (error instanceof Error) {
-      res.status(500).json({message: error.message});
+      res.status(500).json({ message: error.message });
     } else {
-      res.status(500).json({message: 'An unknown error occurred'});
+      res.status(500).json({ message: 'An unknown error occurred' });
     }
   }
 });
@@ -38,7 +38,8 @@ app.get('/users', async (req, res) => {
     const users = await prisma.user.findMany();
     res.status(200).json(users);
   } catch (error: unknown) {
-    res.status(500).json({message: 'Failed to fetch users'});
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 });
 
@@ -50,11 +51,12 @@ app.get('/users/:id', (async (req, res) => {
       where: { id: parseInt(id) },
     });
     if (!user) {
-      return res.status(404).json({message: 'User not found'});
+      return res.status(404).json({ message: 'User not found' });
     }
     res.status(200).json(user);
   } catch (error: unknown) {
-    res.status(500).json({message: 'Failed to fetch user'});
+    console.error('Error fetching user:', error);
+    res.status(500).json({ message: 'Failed to fetch user' });
   }
 }) as RequestHandler);
 
@@ -63,11 +65,12 @@ app.post('/users', async (req, res) => {
   const { name, email } = req.body;
   try {
     const user = await prisma.user.create({
-      data: { name, email }, 
+      data: { name, email },
     });
     res.status(201).json(user);
   } catch (error: unknown) {
-    res.status(500).json({message: 'Failed to create user'});
+    console.error('Error creating user:', error);
+    res.status(500).json({ message: 'Failed to create user' });
   }
 });
 
@@ -82,7 +85,8 @@ app.put('/users/:id', async (req, res) => {
     });
     res.status(200).json(user);
   } catch (error: unknown) {
-    res.status(500).json({message: 'Failed to update user'});
+    console.error('Error updating user:', error);
+    res.status(500).json({ message: 'Failed to update user' });
   }
 });
 
@@ -93,9 +97,10 @@ app.delete('/users/:id', async (req, res) => {
     await prisma.user.delete({
       where: { id: parseInt(id) },
     });
-    res.status(204).json({message: 'User deleted successfully'});
+    res.status(204).json({ message: 'User deleted successfully' });
   } catch (error: unknown) {
-    res.status(500).json({message: 'Failed to delete user'});
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Failed to delete user' });
   }
 });
 
