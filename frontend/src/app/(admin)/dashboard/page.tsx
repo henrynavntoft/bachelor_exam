@@ -20,9 +20,11 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-
+import { Card, CardContent } from "@/components/ui/card";
 interface User {
     id: string;
+    firstName: string;
+    lastName: string;
     email: string;
     name: string;
     role: string;
@@ -103,64 +105,69 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-semibold mb-4">All Users:</h2>
             <div className="grid gap-4">
                 {users.map((user) => (
-                    <div key={user.id} className="border p-4 rounded shadow-sm flex justify-between items-center">
-                        <div>
-                            <div className="font-semibold">{user.name}</div>
-                            <div className="text-gray-600">{user.email}</div>
-                            <div className="text-sm text-gray-500 capitalize">{user.role}</div>
-                        </div>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive">Delete</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Are you sure you want to delete {user.name}? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => deleteUserMutation.mutate(user.id)}>
-                                        Delete
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
+                    <Card key={user.id}>
+                        <CardContent className="flex flex-row justify-between items-center gap-2">
+                            <div className="flex flex-col gap-2">
+                                <div className="font-semibold">{user.firstName} {user.lastName}</div>
+                                <div>{user.email}</div>
+                                <div className="text-sm text-gray-500 capitalize">{user.role}</div>
+                            </div>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">Delete</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to delete {user.name}? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={() => deleteUserMutation.mutate(user.id)}>
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
 
             <h2 className="text-2xl font-semibold mt-8 mb-4">All Events:</h2>
             <div className="grid gap-4">
                 {events.map((event) => (
-                    <div key={event.id} className="border p-4 rounded shadow-sm flex justify-between items-center">
-                        <div>
-                            <div className="font-semibold">{event.title}</div>
-                            <div className="text-gray-600">{event.location}</div>
-                            <div className="text-sm text-gray-500">{format(new Date(event.date), 'PPP')}</div>
-                        </div>
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive">Delete</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Event</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        Are you sure you want to delete {event.title}? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => deleteEventMutation.mutate(event.id)}>
-                                        Delete
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
+                    <Card key={event.id}>
+                        <CardContent className="flex flex-row justify-between items-center gap-2">
+                            <div className="flex flex-col gap-2">
+                                <div className="font-semibold">{event.title}</div>
+                                <div className="text-gray-600">{event.location}</div>
+                                <div className="text-sm text-gray-500">{format(new Date(event.date), 'MM/dd/yyyy')}</div>
+                            </div>
+
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">Delete</Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to delete {event.title}? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={() => deleteEventMutation.mutate(event.id)}>
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
         </div>

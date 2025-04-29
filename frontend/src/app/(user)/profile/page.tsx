@@ -20,7 +20,7 @@ export default function ProfilePage() {
     }
 
     if (!isHost && !isGuest) {
-        return <div>Access Denied</div>;
+        return <LoadingSpinner />;
     }
 
     if (isHost) {
