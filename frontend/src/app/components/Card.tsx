@@ -1,4 +1,6 @@
 import Image from "next/image";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format } from "date-fns";
 
 interface Event {
     id: string;
@@ -8,15 +10,22 @@ interface Event {
     date: string;
     location: string;
 }
-export default function Card({ event }: { event: Event }) {
-    return <div className="bg-white rounded-lg shadow-md overflow-hidden p-4 flex flex-row justify-between">
-        <div>
-            <h1>{event.title}</h1>
-            <p>{event.description}</p>
-            <p>{event.location}</p>
-        </div>
-        <div>
-            <Image src={`https://picsum.photos/200/300?random`} alt={event.title} width={200} height={300} />
-        </div>
-    </div>;
+export default function EventCard({ event }: { event: Event }) {
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>{event.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p>{event.description}</p>
+                <p>{event.location}</p>
+                <p>{format(new Date(event.date), 'MM/dd/yyyy')}</p>
+                <div className="flex flex-row gap-2">
+                    {event.images.map((image) => (
+                        <Image key={event.title} src={image} alt={event.title} width={200} height={200} />
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    );
 }

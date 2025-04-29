@@ -1,46 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { routes } from '@/lib/routes';
 import axios from 'axios';
-import axiosInstance from '@/lib/axios';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface ErrorResponse {
     error: string;
 }
 
 export default function LoginPage() {
-    const router = useRouter();
-    const queryClient = useQueryClient();
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
-    const loginMutation = useMutation({
-        mutationFn: async () => {
-            await axiosInstance.post(
-                routes.auth.login,
-                { email, password },
-                { withCredentials: true }
-            );
-
-            const me = await axiosInstance.get(routes.auth.me, { withCredentials: true });
-            if (!me.data.user) {
-                throw new Error('User verification failed');
-            }
-            return me.data.user;
-        },
-        onMutate: async () => {
-            // Optimistically assume login will succeed
-            queryClient.setQueryData(['me'], { email });
-        },
-        onSuccess: async (user) => {
-            queryClient.setQueryData(['me'], user);
-            router.push('/');
-        },
-        onError: (err: unknown) => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        try {
+            await login(email, password);
+        } catch (err) {
             if (axios.isAxiosError<ErrorResponse>(err)) {
                 setError(err.response?.data?.error || err.message || 'Login failed.');
             } else if (err instanceof Error) {
@@ -48,50 +29,42 @@ export default function LoginPage() {
             } else {
                 setError('An unknown error occurred.');
             }
-        },
-    });
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
-        loginMutation.mutate();
+        }
     };
 
     return (
-        <main className="">
+        <main>
             <form
                 onSubmit={handleSubmit}
-                className="p-4"
+                className="p-4 flex flex-col gap-4"
             >
                 <h1 className="text-2xl font-bold mb-4 text-center">Login</h1>
 
                 {error && <p className="text-red-500 mb-4">{error}</p>}
 
-                <input
+                <Input
                     type="email"
                     placeholder="Email"
-                    className="w-full mb-3 px-3 py-2 border rounded"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                     required
                 />
 
-                <input
+                <Input
                     type="password"
                     placeholder="Password"
-                    className="w-full mb-4 px-3 py-2 border rounded"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                     required
                 />
 
-                <button
+                <Button
                     type="submit"
-                    className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-                    disabled={loginMutation.isPending}
+                    className="w-full"
+                    disabled={false}
                 >
-                    {loginMutation.isPending ? 'Logging in...' : 'Log in'}
-                </button>
+                    Log in
+                </Button>
             </form>
         </main>
     );

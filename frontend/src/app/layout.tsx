@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "./components/QueryProvider";
 import AuthProvider from "./components/AuthProvider";
+import { ThemeProvider } from "./components/ThemeProvider";
+import ClientOnly from "./components/ClientOnly";
 import Header from "./components/Header";
 
 const geistSans = Geist({
@@ -16,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Meet & Greet",
+  title: "Meet & Greet | Culture Connect",
   description: "A platform for meeting new people",
 };
 
@@ -30,8 +32,19 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <QueryProvider>
           <AuthProvider>
-            <Header />
-            {children}
+
+            <ClientOnly>
+              <ThemeProvider
+                attribute="class"
+                defaultTheme="system"
+                enableSystem
+                disableTransitionOnChange
+              >
+                <Header />
+                {children}
+              </ThemeProvider>
+            </ClientOnly>
+
           </AuthProvider>
         </QueryProvider>
       </body>

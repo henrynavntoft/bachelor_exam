@@ -9,7 +9,7 @@ const router = Router();
 // GET all users (Admin only)
 router.get('/', authenticateJWT(['ADMIN']), requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const users = await prisma.user.findMany();
+        const users = await prisma.user.findMany({ where: { isDeleted: false } });
         res.json(users);
     } catch (error) {
         console.error("Error fetching users:", error);
@@ -62,5 +62,6 @@ router.delete('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Req
         res.status(500).json({ message: 'Failed to delete user' });
     }
 }) as RequestHandler);
+
 
 export default router;

@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -110,5 +110,64 @@ router.get('/me', authenticateJWT(), (req: AuthenticatedRequest, res: Response, 
         }
     })();
 });
+
+// Create a new user (Signup)
+router.post('/signup', (async (req: Request, res: Response) => {
+    const { firstName, lastName, email, password, confirmPassword, role } = req.body;
+
+    // Input validation
+    if (!firstName || !lastName || !email || !password || !confirmPassword) {
+        return res.status(400).json({ error: "All fields are required." });
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+        return res.status(400).json({ error: "Invalid email format." });
+    }
+
+    const passwordPattern = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+    if (!passwordPattern.test(password)) {
+        return res.status(400).json({
+            error: "Password must be at least 8 characters long, include uppercase, lowercase, digit, and special character.",
+        });
+    }
+
+    if (password !== confirmPassword) {
+        return res.status(400).json({ error: "Passwords do not match." });
+    }
+
+    const validRoles = ['GUEST', 'HOST'];
+    if (!role || !validRoles.includes(role)) {
+        return res.status(400).json({ error: "Role must be either 'GUEST' or 'HOST'." });
+    }
+
+    try {
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return res.status(409).json({ error: "Email already in use." });
+        }
+
+        const saltRounds = 14;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        const user = await prisma.user.create({
+            data: {
+                firstName,
+                lastName,
+                email,
+                hashedPassword,
+                role
+            },
+        });
+
+        res.status(201).json({ message: "User created successfully.", user });
+    } catch (error) {
+        console.error("Error creating user:", error);
+        if (error instanceof Error && 'code' in error && error.code === "P2002") {
+            return res.status(409).json({ error: "Email already in use." });
+        }
+        res.status(500).json({ error: "Failed to create user. Please try again." });
+    }
+}) as RequestHandler);
 
 export default router;

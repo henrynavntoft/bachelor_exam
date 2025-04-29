@@ -8,7 +8,7 @@ const router = Router();
 // Get all events
 router.get('/', (async (req: Request, res: Response) => {
     try {
-        const events = await prisma.event.findMany();
+        const events = await prisma.event.findMany({ where: { isDeleted: false } });
         res.status(200).json(events);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -72,22 +72,35 @@ router.put('/:id', authenticateJWT(['HOST']), requireHost, (async (req: Authenti
 }) as RequestHandler);
 
 // Delete an event
-router.delete('/:id', authenticateJWT(['HOST']), requireHost, (async (req: AuthenticatedRequest, res: Response) => {
-    const { id } = req.params;
-    try {
-        const event = await prisma.event.findUnique({ where: { id } });
-        if (!event) {
-            return res.status(404).json({ message: 'Event not found' });
+router.delete(
+    '/:id',
+    authenticateJWT(['HOST', 'ADMIN']),
+    (async (req: AuthenticatedRequest, res: Response) => {
+        const { id } = req.params;
+        try {
+            const event = await prisma.event.findUnique({ where: { id } });
+
+            if (!event) {
+                return res.status(404).json({ message: 'Event not found' });
+            }
+
+            // If user is HOST, check ownership
+            if (req.user?.role === 'HOST' && event.hostId !== req.user?.userId) {
+                return res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
+            }
+
+            // If ADMIN, no extra checks needed - can delete any event
+            await prisma.event.update({
+                where: { id },
+                data: { isDeleted: true }, // soft delete!
+            });
+
+            res.status(204).send();
+        } catch (error) {
+            console.error('Error deleting event:', error);
+            res.status(500).json({ message: 'Failed to delete event' });
         }
-        if (event.hostId !== req.user?.userId) {
-            return res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
-        }
-        await prisma.event.delete({ where: { id } });
-        res.status(204).send();
-    } catch (error) {
-        console.error('Error deleting event:', error);
-        res.status(500).json({ message: 'Failed to delete event' });
-    }
-}) as RequestHandler);
+    }) as RequestHandler
+);
 
 export default router;
