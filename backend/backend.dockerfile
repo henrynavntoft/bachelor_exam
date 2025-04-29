@@ -1,17 +1,27 @@
+# Use official Node image
 FROM node:20-alpine
 
+# Set working directory
 WORKDIR /app
 
-COPY package*.json ./
+# Copy only package.json and package-lock.json first
+COPY package.json package-lock.json ./
 
+# Install all backend dependencies inside container
 RUN npm install
 
+# Copy prisma folder
 COPY prisma ./prisma
 
+# Generate Prisma Client
 RUN npx prisma generate
 
+# Copy the rest of your backend code
 COPY . .
 
+# Expose backend ports
 EXPOSE 4000
+EXPOSE 5555
 
+# Use entrypoint script to decide dev/prod
 ENTRYPOINT ["sh", "entrypoint.sh"]

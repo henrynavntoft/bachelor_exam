@@ -1,3 +1,39 @@
+# .dockerignore for backend
+
+# Node modules should not be copied (installed cleanly in container)
 node_modules
+
+# Ignore build artifacts
 dist
+build
+
+# Ignore logs
 *.log
+npm-debug.log*
+
+# Ignore Prisma generated files (optional, depending on setup)
+.prisma
+coverage/
+
+# Ignore Mac system files
+.DS_Store
+
+# Ignore Git files
+.git
+.gitignore
+
+# Ignore Docker files themselves
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+backend.dockerfile
+entrypoint.sh
+
+# Ignore editor/IDE folders
+.vscode
+.idea
+*.swp
+
+# Ignore environment variable files except the ones you use
+.env
+.env.*

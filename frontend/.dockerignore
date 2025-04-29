@@ -1,3 +1,45 @@
+# .dockerignore for frontend
+
+# Ignore node_modules - we install inside container
 node_modules
-dist
+
+# Ignore logs
 *.log
+npm-debug.log*
+
+# Ignore local dev files
+.next
+out
+dist
+
+# Ignore Mac system files
+.DS_Store
+
+# Ignore Git stuff
+.git
+.gitignore
+
+# Ignore Docker files themselves
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+frontend.dockerfile
+entrypoint.sh
+
+# Ignore editor/IDE folders
+.vscode
+.idea
+*.swp
+
+# Ignore test files if you have them
+__tests__/
+coverage/
+jest.config.js
+jest.setup.js
+
+# Ignore environment files except production/development
+.env.local
+.env.development.local
+.env.production.local
+.env.test
+.env.test.local

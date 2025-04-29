@@ -1,7 +1,8 @@
 services:
   frontend:
     container_name: frontend
-    image: frontend
+    volumes:
+    - ./frontend:/app:cached
     build:
       context: ./frontend
       dockerfile: frontend.dockerfile
@@ -12,14 +13,15 @@ services:
       - RTE=${RTE}
     env_file:
       - ./frontend/.env.${RTE}
-    restart: always
+    restart: unless-stopped
     depends_on:
       - backend
     networks:
       - external-network
   backend:
     container_name: backend
-    image: backend
+    volumes:
+    - ./backend:/app:cached
     build:
       context: ./backend
       dockerfile: backend.dockerfile
@@ -33,14 +35,14 @@ services:
       - ./backend/.env.${RTE}
     depends_on:
       - db
-    restart: always
+    restart: unless-stopped
     networks:
       - internal-network
       - external-network
   db:
     container_name: db
     image: postgres:17
-    restart: always 
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -51,6 +53,11 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - internal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   internal-network:
