@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 import userRoutes from '../src/routes/users';
 import eventRoutes from '../src/routes/events';
 import authRoutes from '../src/routes/auth';
+import uploadRoute from './routes/upload';
+
 
 dotenv.config({ path: './.env' });
 
@@ -42,7 +44,7 @@ app.get('/', (req: Request, res: Response) => {
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/auth', authRoutes);
-
+app.use('/api/upload', uploadRoute);
 ////////////////////////////////////////////////////////////////////////////////////////
 // Global error handler
 export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {

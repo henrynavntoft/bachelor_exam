@@ -20,4 +20,7 @@ export const routes = {
         delete: (id: string) => `${API_BASE}/users/${id}`,
         update: (id: string) => `${API_BASE}/users/${id}`,
     },
+    upload: {
+        upload: `${API_BASE}/upload`,
+    },
 };
