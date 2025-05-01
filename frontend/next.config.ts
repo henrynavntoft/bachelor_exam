@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
         hostname: 'picsum.photos',
       },
       {
-        hostname: 'res.cloudinary.com',
+        hostname: 'mg-storage.eu-central-1.linodeobjects.com',
       },
     ],
   },

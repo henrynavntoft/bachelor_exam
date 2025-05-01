@@ -17,8 +17,10 @@ const upload = multer({
         bucket: process.env.LINODE_BUCKET_NAME!,
         acl: 'public-read',
         key: (req, file, cb) => {
-            const uniqueName = `${Date.now()}-${file.originalname}`;
-            cb(null, `meet-and-greet/${uniqueName}`);
+            // Strip any path or directory structure and save at root of bucket
+            const fileName = file.originalname.split('/').pop() || file.originalname;
+            const uniqueName = `${Date.now()}-${fileName}`;
+            cb(null, uniqueName); // No folder prefix
         },
     }),
 });
@@ -34,24 +36,40 @@ router.post('/', authenticateJWT(['ADMIN', 'HOST']), upload.single('image'), (re
     res.status(200).json({ url: file.location }); // public URL
 });
 
+// In the future, support for deleting multiple images at once (bulk deletion) can be added here.
 router.delete('/', authenticateJWT(['ADMIN', 'HOST']), async (req: Request, res: Response): Promise<void> => {
-    const { key } = req.body;
+    let keys = req.body.key;
 
-    if (!key) {
-        res.status(400).json({ error: 'Missing object key' });
+    if (!keys) {
+        res.status(400).json({ error: 'Missing object key(s)' });
         return;
     }
 
+    // Allow for single string or array of keys
+    if (!Array.isArray(keys)) {
+        keys = [keys];
+    }
+
     try {
-        const deleteCommand = new DeleteObjectCommand({
-            Bucket: process.env.LINODE_BUCKET_NAME!,
-            Key: key,
-        });
-        await s3.send(deleteCommand);
-        res.status(200).json({ message: 'File deleted successfully' });
+        for (const rawKey of keys) {
+            // Extract just the object key if a full URL is passed
+            const key = typeof rawKey === 'string' && rawKey.includes('/')
+                ? rawKey.split('/').pop()
+                : rawKey;
+
+            if (!key) continue;
+
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: process.env.LINODE_BUCKET_NAME!,
+                Key: key,
+            });
+            await s3.send(deleteCommand);
+            console.log(`Deleted object: ${key}`);
+        }
+        res.status(200).json({ message: 'File(s) deleted successfully' });
     } catch (error) {
-        console.error('Error deleting file:', error);
-        res.status(500).json({ error: 'Failed to delete file' });
+        console.error('Error deleting file(s):', error);
+        res.status(500).json({ error: 'Failed to delete file(s)' });
     }
 });
 

@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import LoadingSpinner from '../../components/LoadingSpinner';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
 import { format } from 'date-fns';
@@ -35,6 +35,7 @@ interface Event {
 export default function ProfilePage() {
     const { isAuthenticated, isHost, isGuest, isLoading } = useAuth();
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
     const [formValues, setFormValues] = useState({
         title: '',
@@ -43,6 +44,12 @@ export default function ProfilePage() {
         location: '',
         images: [] as string[],
     });
+
+    // Add state to track images marked for deletion
+    const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+
+    // Add state to track preview images of newly selected files
+    const [previewImages, setPreviewImages] = useState<string[]>([]);
 
     const imageRef = useRef<HTMLInputElement>(null);
 
@@ -55,12 +62,23 @@ export default function ProfilePage() {
         enabled: isAuthenticated && isHost,
     });
 
-    function handleRemoveImage(imageUrl: string) {
+    // Modify handleRemoveImage to mark image for deletion
+    async function handleRemoveImage(imageUrl: string) {
         setFormValues((prev) => ({
             ...prev,
             images: prev.images.filter((url) => url !== imageUrl),
         }));
+        setImagesToDelete((prev) => [...prev, imageUrl]);
     }
+
+    // Handler to show previews when files are selected
+    const handleFileChange = () => {
+        const files = imageRef.current?.files;
+        if (files) {
+            const previews = Array.from(files).map((file) => URL.createObjectURL(file));
+            setPreviewImages(previews);
+        }
+    };
 
     async function handleEditSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -74,12 +92,16 @@ export default function ProfilePage() {
                 const formData = new FormData();
                 formData.append('image', file);
 
-                const uploadRes = await axiosInstance.post(routes.upload.upload, formData, {
-                    withCredentials: true,
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
+                const uploadRes = await axiosInstance.post(
+                    routes.upload.upload,
+                    formData,
+                    {
+                        headers: { 'Content-Type': 'multipart/form-data' },
+                        withCredentials: true,
+                    }
+                );
 
-                return uploadRes.data.url;
+                return uploadRes.data.url || uploadRes.data.location;
             });
 
             try {
@@ -102,7 +124,32 @@ export default function ProfilePage() {
                 },
                 { withCredentials: true }
             );
-            router.refresh();
+
+            // Perform image deletions after event update
+            await Promise.all(
+                imagesToDelete.map((imageUrl) => {
+                    const key = new URL(imageUrl).pathname.replace(/^\/?/, '');
+                    return axiosInstance.delete(routes.upload.delete, {
+                        data: { key },
+                        withCredentials: true,
+                    });
+                })
+            );
+
+            // Update the cached events data to reflect the edited event instantly
+            queryClient.setQueryData<Event[]>(['host-events'], (old) =>
+                old?.map(ev =>
+                    ev.id === selectedEventId
+                        ? { ...ev, ...formValues, images: [...formValues.images, ...uploadedImageUrls] }
+                        : ev
+                ) ?? []
+            );
+
+            // Clear form state
+            setSelectedEventId(null);
+            setFormValues({ title: '', description: '', date: '', location: '', images: [] });
+            setImagesToDelete([]);
+            setPreviewImages([]);
         } catch (err) {
             console.error("Update failed", err);
         }
@@ -157,6 +204,10 @@ export default function ProfilePage() {
                                                         location: event.location,
                                                         images: event.images,
                                                     });
+                                                    setPreviewImages([]);
+                                                    if (imageRef.current) {
+                                                        imageRef.current.value = '';
+                                                    }
                                                 }}
                                             >
                                                 Edit
@@ -210,12 +261,18 @@ export default function ProfilePage() {
                                                             </button>
                                                         </div>
                                                     ))}
+                                                    {previewImages.map((src, index) => (
+                                                        <div key={index} className="relative">
+                                                            <Image src={src} alt="preview" width={80} height={80} className="rounded opacity-50" />
+                                                        </div>
+                                                    ))}
                                                 </div>
                                                 <input
                                                     type="file"
                                                     multiple
                                                     className="border rounded p-2"
                                                     ref={imageRef}
+                                                    onChange={handleFileChange}
                                                 />
 
 

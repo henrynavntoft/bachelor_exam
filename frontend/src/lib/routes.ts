@@ -22,5 +22,6 @@ export const routes = {
     },
     upload: {
         upload: `${API_BASE}/upload`,
+        delete: `${API_BASE}/upload`,
     },
 };
