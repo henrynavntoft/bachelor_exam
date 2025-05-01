@@ -4,6 +4,7 @@ services:
     volumes:
     - ./frontend:/app:cached
     - /app/node_modules
+    - /app/.next
     build:
       context: ./frontend
       dockerfile: frontend.dockerfile
