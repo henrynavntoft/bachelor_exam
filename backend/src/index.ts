@@ -6,9 +6,9 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
-import userRoutes from '../src/routes/users';
-import eventRoutes from '../src/routes/events';
-import authRoutes from '../src/routes/auth';
+import userRoutes from './routes/users';
+import eventRoutes from './routes/events';
+import authRoutes from './routes/auth';
 import uploadRoute from './routes/upload';
 
 
