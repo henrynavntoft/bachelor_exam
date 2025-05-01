@@ -9,8 +9,13 @@ echo "== Generating Prisma Client =="
 npx prisma generate
 
 if [ "$RTE" = "prod" ]; then
+  echo "== Running Prisma Migrate =="
+  npx prisma migrate deploy
+fi
+
+if [ "$RTE" = "prod" ]; then
   echo "=== Production Mode ==="
-  npm run dev
+  npm start
 else
   echo "=== Development Mode ==="
   npm run dev

@@ -13,9 +13,6 @@ RUN npm install
 # Copy prisma folder
 COPY prisma ./prisma
 
-# Generate Prisma Client
-RUN npx prisma generate
-
 # Copy the rest of your backend code
 COPY . .
 
