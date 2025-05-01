@@ -3,6 +3,7 @@ services:
     container_name: frontend
     volumes:
     - ./frontend:/app:cached
+    - /app/node_modules
     build:
       context: ./frontend
       dockerfile: frontend.dockerfile
@@ -22,6 +23,7 @@ services:
     container_name: backend
     volumes:
     - ./backend:/app:cached
+    - /app/node_modules
     build:
       context: ./backend
       dockerfile: backend.dockerfile
