@@ -62,7 +62,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx.${RTE}.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./nginx/ssl:/etc/letsencrypt:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
