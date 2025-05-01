@@ -4,10 +4,8 @@ echo "== Frontend running in $RTE mode =="
 
 if [ "$RTE" = "prod" ]; then
   echo "=== Production Mode ==="
-  if [ ! -d ".next" ]; then
-    echo "No .next folder found, running build..."
-    npm run build
-  fi
+  echo "Running build..."
+  npm run build
   npm run start
 else
   echo "=== Development Mode ==="
