@@ -1,33 +1,57 @@
-import cloudinary from '../lib/cloudinary';
+import { Router, Request, Response } from 'express';
 import multer from 'multer';
-import { Router } from 'express';
-import fs from 'fs/promises';
+import multerS3 from 'multer-s3';
+import s3 from '../lib/s3';
+import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { authenticateJWT } from '../middleware/authMiddleware';
 
-
 const router = Router();
-const upload = multer({ dest: 'uploads/' }); // Temporary storage
 
-router.post('/', authenticateJWT(['ADMIN', 'HOST']), upload.single('image'), async (req, res) => {
+interface S3File extends Express.Multer.File {
+    location: string;
+}
+
+const upload = multer({
+    storage: multerS3({
+        s3,
+        bucket: process.env.LINODE_BUCKET_NAME!,
+        acl: 'public-read',
+        key: (req, file, cb) => {
+            const uniqueName = `${Date.now()}-${file.originalname}`;
+            cb(null, `meet-and-greet/${uniqueName}`);
+        },
+    }),
+});
+
+router.post('/', authenticateJWT(['ADMIN', 'HOST']), upload.single('image'), (req: Request, res: Response): void => {
+    const file = req.file as S3File | undefined;
+
+    if (!file || !file.location) {
+        res.status(400).json({ error: 'Upload failed' });
+        return;
+    }
+
+    res.status(200).json({ url: file.location }); // public URL
+});
+
+router.delete('/', authenticateJWT(['ADMIN', 'HOST']), async (req: Request, res: Response): Promise<void> => {
+    const { key } = req.body;
+
+    if (!key) {
+        res.status(400).json({ error: 'Missing object key' });
+        return;
+    }
+
     try {
-        if (!req.file) {
-            res.status(400).json({ error: 'No file uploaded' });
-            return;
-        }
-        const result = await cloudinary.uploader.upload(req.file.path, {
-            folder: 'meet-and-greet',
+        const deleteCommand = new DeleteObjectCommand({
+            Bucket: process.env.LINODE_BUCKET_NAME!,
+            Key: key,
         });
-
-        try {
-            await fs.unlink(req.file.path);
-        } catch (unlinkError) {
-            console.error('Failed to delete temp file:', unlinkError);
-        }
-
-        res.status(200).json({ url: result.secure_url });
+        await s3.send(deleteCommand);
+        res.status(200).json({ message: 'File deleted successfully' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Upload failed' });
+        console.error('Error deleting file:', error);
+        res.status(500).json({ error: 'Failed to delete file' });
     }
 });
 

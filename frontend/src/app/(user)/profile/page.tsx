@@ -15,11 +15,11 @@ import {
     AlertDialog,
     AlertDialogTrigger,
     AlertDialogContent,
+    AlertDialogCancel,
+    AlertDialogAction,
     AlertDialogHeader,
     AlertDialogTitle,
     AlertDialogDescription,
-    AlertDialogCancel,
-    AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 
 interface Event {
@@ -41,6 +41,7 @@ export default function ProfilePage() {
         description: '',
         date: '',
         location: '',
+        images: [] as string[],
     });
 
     const imageRef = useRef<HTMLInputElement>(null);
@@ -53,6 +54,13 @@ export default function ProfilePage() {
         },
         enabled: isAuthenticated && isHost,
     });
+
+    function handleRemoveImage(imageUrl: string) {
+        setFormValues((prev) => ({
+            ...prev,
+            images: prev.images.filter((url) => url !== imageUrl),
+        }));
+    }
 
     async function handleEditSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -90,7 +98,7 @@ export default function ProfilePage() {
                     description: formValues.description,
                     date: new Date(formValues.date),
                     location: formValues.location,
-                    images: uploadedImageUrls,
+                    images: [...formValues.images, ...uploadedImageUrls],
                 },
                 { withCredentials: true }
             );
@@ -147,6 +155,7 @@ export default function ProfilePage() {
                                                         description: event.description,
                                                         date: format(new Date(event.date), 'yyyy-MM-dd'),
                                                         location: event.location,
+                                                        images: event.images,
                                                     });
                                                 }}
                                             >
@@ -160,6 +169,7 @@ export default function ProfilePage() {
                                                     Update the details below and click Save Changes.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
+
                                             <form className="flex flex-col gap-4 p-4" onSubmit={handleEditSubmit}>
                                                 <input
                                                     type="text"
@@ -187,6 +197,20 @@ export default function ProfilePage() {
                                                     className="border rounded p-2"
                                                     placeholder="Event Location"
                                                 />
+                                                <div className="flex flex-wrap gap-2">
+                                                    {formValues.images.map((image) => (
+                                                        <div key={image} className="relative">
+                                                            <Image src={image} alt="event image" width={80} height={80} className="rounded" />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRemoveImage(image)}
+                                                                className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                                 <input
                                                     type="file"
                                                     multiple
