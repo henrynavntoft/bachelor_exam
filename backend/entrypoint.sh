@@ -1,19 +1,19 @@
 #!/bin/sh
 
-set -e  # Stop the script immediately if a command fails
+set -e  # Exit on error
 
 echo "== Backend running in $RTE mode =="
 
-# Make sure prisma client is generated
 echo "== Generating Prisma Client =="
 npx prisma generate
 
 if [ "$RTE" = "prod" ]; then
   echo "== Running Prisma Migrate =="
   npx prisma migrate deploy
-fi
 
-if [ "$RTE" = "prod" ]; then
+  echo "== Building TypeScript =="
+  npx tsc
+
   echo "=== Production Mode ==="
   npm start
 else
