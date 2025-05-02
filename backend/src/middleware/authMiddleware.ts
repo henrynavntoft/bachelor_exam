@@ -1,8 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 interface DecodedUser extends JwtPayload {
     userId: string;
@@ -13,22 +10,24 @@ export interface AuthenticatedRequest extends Request {
     user?: DecodedUser;
 }
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is not defined.');
+const isProduction = process.env.RTE === 'prod';
+
+const clearAuthState = (res: Response) => {
+    res.clearCookie('authToken', {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        path: '/',
+    });
+    res.locals.isLoggedIn = false;
+    res.locals.role = null;
+};
+
 // Authentication middleware
 export const authenticateJWT = (roles: string[] = []) => {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-        const JWT_SECRET = process.env.JWT_SECRET;
-        if (!JWT_SECRET) {
-            console.error('JWT_SECRET environment variable is not defined.');
-            res.status(500).json({ message: 'Internal server error' });
-            return;
-        }
-
-        const clearAuthState = (res: Response) => {
-            res.clearCookie('authToken');
-            res.locals.isLoggedIn = false;
-            res.locals.role = null;
-        };
-
         const token = req.cookies?.authToken;
 
         if (!token) {

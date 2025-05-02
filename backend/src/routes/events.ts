@@ -1,12 +1,13 @@
-import { Router, Request, Response, RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { createEventSchema, updateEventSchema, eventIdParamSchema, CreateEventInput, UpdateEventInput, EventIdParam } from '../schemas/eventSchema';
+import { ZodError, ZodIssue } from 'zod';
+import { Router, Request, Response } from 'express';
+import { prisma } from '../config/prisma';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { requireRole } from '../middleware/roleMiddleware';
-const prisma = new PrismaClient();
 const router = Router();
 
 // Get all events
-router.get('/', (async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
     try {
         const events = await prisma.event.findMany({ where: { isDeleted: false } });
         res.status(200).json(events);
@@ -14,29 +15,55 @@ router.get('/', (async (req: Request, res: Response) => {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Failed to fetch events' });
     }
-}) as RequestHandler);
+});
 
 // Get a single event by ID
-router.get('/:id', (async (req: Request, res: Response) => {
-    const { id } = req.params;
+router.get('/:id', async (req: Request, res: Response) => {
+    // Validate ID param
+    let params: { id: string };
+    try {
+        params = eventIdParamSchema.parse(req.params);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        throw err;
+    }
+    const { id } = params;
     try {
         const event = await prisma.event.findUnique({ where: { id } });
         if (!event) {
-            return res.status(404).json({ message: 'Event not found' });
+            res.status(404).json({ message: 'Event not found' });
+            return;
         }
         res.status(200).json(event);
     } catch (error) {
         console.error('Error fetching event:', error);
         res.status(500).json({ message: 'Failed to fetch event' });
     }
-}) as RequestHandler);
+});
 
 // Create a new event
-router.post('/', authenticateJWT(['HOST']), requireRole('HOST'), (async (req: AuthenticatedRequest, res: Response) => {
-    const { title, description, images, date, location } = req.body;
+router.post('/', authenticateJWT(['HOST']), requireRole('HOST'), async (req: AuthenticatedRequest, res: Response) => {
+    // Validate body
+    let body: CreateEventInput;
+    try {
+        body = createEventSchema.parse(req.body);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        throw err;
+    }
+    const { title, description, images, date, location } = body;
     try {
         if (!req.user) {
-            return res.status(401).json({ message: 'Unauthorized' });
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
         }
         const event = await prisma.event.create({
             data: { title, description, images, date: new Date(date), location, hostId: req.user.userId },
@@ -46,47 +73,102 @@ router.post('/', authenticateJWT(['HOST']), requireRole('HOST'), (async (req: Au
         console.error('Error creating event:', error);
         res.status(500).json({ message: 'Failed to create event' });
     }
-}) as RequestHandler);
+});
 
 // Update an event
-router.put('/:id', authenticateJWT(['HOST']), requireRole('HOST'), (async (req: AuthenticatedRequest, res: Response) => {
-    const { id } = req.params;
-    const { title, description, images, date, location } = req.body;
+router.put('/:id', authenticateJWT(['HOST']), requireRole('HOST'), async (req: AuthenticatedRequest, res: Response) => {
+    // Validate ID param
+    let params: EventIdParam;
+    try {
+        params = eventIdParamSchema.parse(req.params);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        throw err;
+    }
+    const { id } = params;
+
+    // Validate body
+    let body: UpdateEventInput;
+    try {
+        body = updateEventSchema.parse(req.body);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        throw err;
+    }
+    const { title, description, images, date, location } = body;
     try {
         const event = await prisma.event.findUnique({ where: { id } });
         if (!event) {
-            return res.status(404).json({ message: 'Event not found' });
+            res.status(404).json({ message: 'Event not found' });
+            return;
         }
         if (event.hostId !== req.user?.userId) {
-            return res.status(403).json({ message: 'Forbidden: You can only update your own events.' });
+            res.status(403).json({ message: 'Forbidden: You can only update your own events.' });
+            return;
         }
+        // Build partial update payload
+        const updateData: {
+            title?: string;
+            description?: string;
+            images?: string[];
+            date?: Date;
+            location?: string;
+        } = {};
+        if (title !== undefined) updateData.title = title;
+        if (description !== undefined) updateData.description = description;
+        if (images !== undefined) updateData.images = images;
+        if (date !== undefined) updateData.date = date;  // already a Date from Zod coercion
+        if (location !== undefined) updateData.location = location;
+
         const updatedEvent = await prisma.event.update({
             where: { id },
-            data: { title, description, images, date: new Date(date), location },
+            data: updateData,
         });
         res.status(200).json(updatedEvent);
     } catch (error) {
         console.error('Error updating event:', error);
         res.status(500).json({ message: 'Failed to update event' });
     }
-}) as RequestHandler);
+});
 
 // Delete an event
 router.delete(
     '/:id',
     authenticateJWT(['HOST', 'ADMIN']),
-    (async (req: AuthenticatedRequest, res: Response) => {
-        const { id } = req.params;
+    async (req: AuthenticatedRequest, res: Response) => {
+        // Validate ID param
+        let params: EventIdParam;
+        try {
+            params = eventIdParamSchema.parse(req.params);
+        } catch (err: unknown) {
+            if (err instanceof ZodError) {
+                const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+                res.status(400).json({ error: errorMessage });
+                return;
+            }
+            throw err;
+        }
+        const { id } = params;
         try {
             const event = await prisma.event.findUnique({ where: { id } });
 
             if (!event) {
-                return res.status(404).json({ message: 'Event not found' });
+                res.status(404).json({ message: 'Event not found' });
+                return;
             }
 
             // If user is HOST, check ownership
             if (req.user?.role === 'HOST' && event.hostId !== req.user?.userId) {
-                return res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
+                res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
+                return;
             }
 
             // If ADMIN, no extra checks needed - can delete any event
@@ -100,7 +182,7 @@ router.delete(
             console.error('Error deleting event:', error);
             res.status(500).json({ message: 'Failed to delete event' });
         }
-    }) as RequestHandler
+    }
 );
 
 export default router;

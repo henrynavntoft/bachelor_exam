@@ -1,7 +1,4 @@
 import express, { Express, Request, Response } from 'express';
-import helmet from 'helmet';
-import cors from 'cors';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 
@@ -11,7 +8,11 @@ import authRoutes from './routes/auth';
 import uploadRoute from './routes/upload';
 import { generalLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
+import { securityMiddleware } from './middleware/headerMiddleware';
 import { attachCSRFToken, validateCSRFToken } from './middleware/csrfMiddleware';
+import { corsMiddleware } from './middleware/corsMiddleware';
+import { loggingMiddleware } from './middleware/loggingMiddleware';
+
 
 
 dotenv.config({ path: './.env' });
@@ -19,25 +20,12 @@ dotenv.config({ path: './.env' });
 const app: Express = express();
 
 app.use(generalLimiter);
-
-app.use(helmet());
-app.use(morgan('dev'));
+app.use(securityMiddleware);
+app.use(loggingMiddleware);
 app.use(cookieParser());
 app.use(express.json());
+app.use(corsMiddleware);
 app.use(attachCSRFToken);
-
-const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [];
-
-app.use(cors({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-}));
 
 app.get('/', (req: Request, res: Response) => {
     res.send('Server is running');

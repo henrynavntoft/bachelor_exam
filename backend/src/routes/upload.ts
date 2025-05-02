@@ -1,11 +1,15 @@
 import { Router, Request, Response } from 'express';
-import multer from 'multer';
+import multer, { MulterError } from 'multer';
 import multerS3 from 'multer-s3';
 import s3 from '../lib/s3';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { authenticateJWT } from '../middleware/authMiddleware';
+import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
 
 const router = Router();
+
+if (!process.env.LINODE_BUCKET_NAME) {
+    throw new Error('LINODE_BUCKET_NAME is not defined');
+}
 
 interface S3File extends Express.Multer.File {
     location: string;
@@ -25,16 +29,34 @@ const upload = multer({
     }),
 });
 
-router.post('/', authenticateJWT(['ADMIN', 'HOST']), upload.single('image'), (req: Request, res: Response): void => {
-    const file = req.file as S3File | undefined;
+router.post(
+    '/',
+    authenticateJWT(['ADMIN', 'HOST']),
+    (req: AuthenticatedRequest, res: Response) => {
+        // Use multer explicitly to catch errors
+        upload.single('image')(req, res, (err: unknown) => {
+            if (err) {
+                if (err instanceof MulterError) {
+                    console.error('Multer upload error:', err.message);
+                } else if (err instanceof Error) {
+                    console.error('Unknown upload error:', err.message);
+                } else {
+                    console.error('Upload error:', err);
+                }
+                res.status(500).json({ error: 'Upload failed' });
+                return;
+            }
 
-    if (!file || !file.location) {
-        res.status(400).json({ error: 'Upload failed' });
-        return;
+            const file = req.file as S3File | undefined;
+            if (!file || !file.location) {
+                res.status(400).json({ error: 'Upload failed' });
+                return;
+            }
+
+            res.status(200).json({ url: file.location });
+        });
     }
-
-    res.status(200).json({ url: file.location }); // public URL
-});
+);
 
 // In the future, support for deleting multiple images at once (bulk deletion) can be added here.
 router.delete('/', authenticateJWT(['ADMIN', 'HOST']), async (req: Request, res: Response): Promise<void> => {

@@ -5,6 +5,6 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
     if (res.headersSent) return next(err);
     res.status(500).json({
         message: 'Internal Server Error',
-        error: process.env.NODE_ENV === 'dev' ? err.message : undefined,
+        error: process.env.RTE === 'dev' ? err.message : undefined,
     });
 }

@@ -1,169 +1,143 @@
-import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import { loginSchema, signupSchema } from '../schemas/authSchema';
+import { ZodError, ZodIssue } from 'zod';
+import { prisma } from '../config/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET!;
+const isProduction = process.env.RTE === 'prod';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is not defined.');
+interface CookieOptions {
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: 'none' | 'lax' | 'strict';
+    path: string;
+    maxAge: number;
 }
 
-const isProduction = process.env.NODE_ENV === 'production';
+const cookieOptions = {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 1000,
+};
 
-// Login
+
+
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Login
 router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
+    // 1) Validate input
+    let parsed;
     try {
-        const { email, password } = req.body;
-
-        if (!email || !password) {
-            res.status(400).json({ error: 'Email and password are required' });
+        parsed = loginSchema.parse(req.body);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors
+                .map((issue: ZodIssue) => issue.message)
+                .join(', ');
+            res.status(400).json({ error: errorMessage });
             return;
         }
-
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user || !user.hashedPassword) {
-            res.status(400).json({ error: 'Invalid email or password' });
-            return;
-        }
-
-        const passwordMatch = await bcrypt.compare(password, user.hashedPassword);
-        if (!passwordMatch) {
-            res.status(400).json({ error: 'Invalid email or password' });
-            return;
-        }
-
-        const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET!, {
-            expiresIn: '1h',
-        });
-
-        res.cookie('authToken', token, {
-            httpOnly: true,
-            secure: isProduction,
-            maxAge: 3600000,
-            sameSite: isProduction ? 'none' : 'lax',
-            path: '/',
-        });
-
-        res.json({
-            user: {
-                id: user.id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role,
-            },
-        });
-    } catch (error) {
-        console.error('Login error:', error);
-        next(error);
+        return next(err as Error);
     }
-});
 
-// Logout
-router.post('/logout', (req: Request, res: Response) => {
-    try {
-        res.clearCookie('authToken', {
-            httpOnly: true,
-            secure: isProduction,
-            sameSite: isProduction ? 'none' : 'lax',
-            path: '/',
-        });
-        res.status(200).json({ message: 'Logged out successfully' });
-    } catch (error) {
-        console.error('Logout error:', error);
-        res.status(500).json({ error: 'Logout failed. Please try again.' });
+    // 2) Authenticate
+    const { email, password } = parsed;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user?.hashedPassword) {
+        res.status(400).json({ error: 'Invalid email or password' });
+        return;
     }
-});
-
-// Get user details
-router.get('/me', authenticateJWT(), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    if (!req.user) {
-        res.status(200).json(null);
+    if (!(await bcrypt.compare(password, user.hashedPassword))) {
+        res.status(400).json({ error: 'Invalid email or password' });
         return;
     }
 
+    // 3) Issue token & set cookie
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+    res.cookie('authToken', token, cookieOptions as CookieOptions);
+
+    // 4) Return user profile
+    res.json({
+        user: {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+        },
+    });
+});
+
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Logout
+router.post('/logout', (req, res) => {
+    res.clearCookie('authToken', cookieOptions as CookieOptions);
+    res.json({ message: 'Logged out successfully' });
+});
+
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Me
+router.get('/me', authenticateJWT(), async (req: AuthenticatedRequest, res, next) => {
+    if (!req.user) {
+        res.json(null);
+        return;
+    }
+    const { userId } = req.user;
     try {
         const user = await prisma.user.findUnique({
-            where: { id: req.user.userId },
+            where: { id: userId },
             select: { id: true, firstName: true, lastName: true, email: true, role: true },
         });
-
         if (!user) {
             res.status(404).json({ error: 'User not found' });
             return;
         }
-
         res.json({ user });
-    } catch (error) {
-        console.error('Fetch user error:', error);
-        next(error);
+    } catch (err) {
+        next(err as Error);
     }
 });
 
-// Create a new user (Signup)
-router.post('/signup', (async (req: Request, res: Response) => {
-    const { firstName, lastName, email, password, confirmPassword, role } = req.body;
-
-    // Input validation
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-        return res.status(400).json({ error: "All fields are required." });
-    }
-
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-        return res.status(400).json({ error: "Invalid email format." });
-    }
-
-    const passwordPattern = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
-    if (!passwordPattern.test(password)) {
-        return res.status(400).json({
-            error: "Password must be at least 8 characters long, include uppercase, lowercase, digit, and special character.",
-        });
-    }
-
-    if (password !== confirmPassword) {
-        return res.status(400).json({ error: "Passwords do not match." });
-    }
-
-    const validRoles = ['GUEST', 'HOST'];
-    if (!role || !validRoles.includes(role)) {
-        return res.status(400).json({ error: "Role must be either 'GUEST' or 'HOST'." });
-    }
-
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Signup
+router.post('/signup', async (req: Request, res, next) => {
+    let parsed;
     try {
-        const existingUser = await prisma.user.findUnique({ where: { email } });
-        if (existingUser) {
-            return res.status(409).json({ error: "Email already in use." });
+        parsed = signupSchema.parse(req.body);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors
+                .map((issue: ZodIssue) => issue.message)
+                .join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        return next(err as Error);
+    }
+
+    const { firstName, lastName, email, password, role } = parsed;
+    try {
+        const exists = await prisma.user.findUnique({ where: { email } });
+        if (exists) {
+            res.status(409).json({ error: 'Email already in use.' });
+            return;
         }
 
-        const saltRounds = 14;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-
+        const hashed = await bcrypt.hash(password, 14);
         const user = await prisma.user.create({
-            data: {
-                firstName,
-                lastName,
-                email,
-                hashedPassword,
-                role
-            },
+            data: { firstName, lastName, email, hashedPassword: hashed, role },
         });
 
-        res.status(201).json({ message: "User created successfully.", user });
-    } catch (error) {
-        console.error("Error creating user:", error);
-        if (error instanceof Error && 'code' in error && error.code === "P2002") {
-            return res.status(409).json({ error: "Email already in use." });
-        }
-        res.status(500).json({ error: "Failed to create user. Please try again." });
+        res.status(201).json({ user });
+    } catch (err) {
+        next(err as Error);
     }
-}) as RequestHandler);
+});
 
 export default router;

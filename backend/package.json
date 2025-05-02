@@ -27,13 +27,16 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-pino-logger": "^7.0.0",
     "express-rate-limit": "^7.5.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.2",
     "multer-s3": "^3.0.1",
-    "prisma": "^6.6.0"
+    "pino": "^9.6.0",
+    "prisma": "^6.6.0",
+    "zod": "^3.24.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.1",
@@ -41,6 +44,7 @@
     "@types/cookie-parser": "^1.4.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
+    "@types/express-pino-logger": "^4.0.5",
     "@types/helmet": "^0.0.48",
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.12",

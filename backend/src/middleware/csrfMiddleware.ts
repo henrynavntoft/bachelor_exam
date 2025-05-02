@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 
+interface CsrfBody {
+    _csrf?: string;
+}
+
 const CSRF_SECRET = process.env.CSRF_SECRET;
 if (!CSRF_SECRET) {
     throw new Error('CSRF_SECRET is not defined in .env');
@@ -36,7 +40,19 @@ export const attachCSRFToken = (req: Request, res: Response, next: NextFunction)
 export const validateCSRFToken = (req: Request, res: Response, next: NextFunction) => {
     if (['GET', 'HEAD'].includes(req.method)) return next();
 
-    const csrfToken = req.body._csrf || req.headers['x-csrf-token'];
+    // Safely extract CSRF token from body or header
+    const rawBody = req.body as unknown;
+    let bodyToken: string | undefined;
+    if (rawBody && typeof rawBody === 'object') {
+        const { _csrf } = rawBody as CsrfBody;
+        if (typeof _csrf === 'string') {
+            bodyToken = _csrf;
+        }
+    }
+    const headerTokenRaw = req.headers['x-csrf-token'];
+    const headerToken = Array.isArray(headerTokenRaw) ? headerTokenRaw[0] : headerTokenRaw;
+    const csrfToken = bodyToken || headerToken;
+
     const cookieToken = req.cookies['csrf-token'];
 
     if (!csrfToken || !cookieToken || !validateSignedCSRFToken(cookieToken)) {
