@@ -1,13 +1,13 @@
 import { Router, Request, Response, RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
-import { requireAdmin } from '../middleware/adminMiddleware';
+import { requireRole } from '../middleware/roleMiddleware';
 
 const prisma = new PrismaClient();
 const router = Router();
 
 // GET all users (Admin only)
-router.get('/', authenticateJWT(['ADMIN']), requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const users = await prisma.user.findMany({ where: { isDeleted: false } });
         res.json(users);
@@ -18,7 +18,7 @@ router.get('/', authenticateJWT(['ADMIN']), requireAdmin, async (req: Authentica
 });
 
 // Get a single user by ID
-router.get('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Request, res: Response) => {
+router.get('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), (async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const user = await prisma.user.findUnique({ where: { id } });
@@ -33,7 +33,7 @@ router.get('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Reques
 }) as RequestHandler);
 
 // Update a user
-router.put('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Request, res: Response) => {
+router.put('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), (async (req: Request, res: Response) => {
     const { id } = req.params;
     const { firstName, lastName, email } = req.body;
     try {
@@ -49,7 +49,7 @@ router.put('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Reques
 }) as RequestHandler);
 
 // Delete a user
-router.delete('/:id', authenticateJWT(['ADMIN']), requireAdmin, (async (req: Request, res: Response) => {
+router.delete('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), (async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         await prisma.user.update({

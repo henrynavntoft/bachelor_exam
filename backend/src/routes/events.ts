@@ -1,7 +1,7 @@
 import { Router, Request, Response, RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
-import { requireHost } from '../middleware/adminMiddleware';
+import { requireRole } from '../middleware/roleMiddleware';
 const prisma = new PrismaClient();
 const router = Router();
 
@@ -32,7 +32,7 @@ router.get('/:id', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 // Create a new event
-router.post('/', authenticateJWT(['HOST']), requireHost, (async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', authenticateJWT(['HOST']), requireRole('HOST'), (async (req: AuthenticatedRequest, res: Response) => {
     const { title, description, images, date, location } = req.body;
     try {
         if (!req.user) {
@@ -49,7 +49,7 @@ router.post('/', authenticateJWT(['HOST']), requireHost, (async (req: Authentica
 }) as RequestHandler);
 
 // Update an event
-router.put('/:id', authenticateJWT(['HOST']), requireHost, (async (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id', authenticateJWT(['HOST']), requireRole('HOST'), (async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
     const { title, description, images, date, location } = req.body;
     try {

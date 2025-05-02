@@ -13,21 +13,26 @@ export interface AuthenticatedRequest extends Request {
     user?: DecodedUser;
 }
 
-// Ensure JWT secret exists at runtime
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET environment variable is not defined.');
-}
-
 // Authentication middleware
 export const authenticateJWT = (roles: string[] = []) => {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-        const token = req.cookies?.authToken;
+        const JWT_SECRET = process.env.JWT_SECRET;
+        if (!JWT_SECRET) {
+            console.error('JWT_SECRET environment variable is not defined.');
+            res.status(500).json({ message: 'Internal server error' });
+            return;
+        }
 
-        if (!token) {
+        const clearAuthState = (res: Response) => {
             res.clearCookie('authToken');
             res.locals.isLoggedIn = false;
             res.locals.role = null;
+        };
+
+        const token = req.cookies?.authToken;
+
+        if (!token) {
+            clearAuthState(res);
             if (roles.length > 0) {
                 res.status(401).json({ message: 'Unauthorized' });
             } else {
@@ -51,15 +56,12 @@ export const authenticateJWT = (roles: string[] = []) => {
             next();
         } catch (error) {
             console.error('JWT verification failed:', error);
-            res.clearCookie('authToken');
-            res.locals.isLoggedIn = false;
-            res.locals.role = null;
+            clearAuthState(res);
             if (roles.length > 0) {
                 res.status(401).json({ message: 'Unauthorized' });
             } else {
                 next();
             }
-            return;
         }
     };
 };

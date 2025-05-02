@@ -1,0 +1,54 @@
+import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
+
+const CSRF_SECRET = process.env.CSRF_SECRET;
+if (!CSRF_SECRET) {
+    throw new Error('CSRF_SECRET is not defined in .env');
+}
+
+export const generateSignedCSRFToken = () => {
+    const token = crypto.randomBytes(32).toString('hex');
+    const signature = crypto.createHmac('sha256', CSRF_SECRET).update(token).digest('hex');
+    return `${token}.${signature}`;
+};
+
+const validateSignedCSRFToken = (signedToken: string) => {
+    const [token, signature] = signedToken.split('.');
+    if (!token || !signature) return false;
+
+    const expectedSig = crypto.createHmac('sha256', CSRF_SECRET).update(token).digest('hex');
+    return signature === expectedSig;
+};
+
+export const attachCSRFToken = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.cookies['csrf-token']) {
+        const signed = generateSignedCSRFToken();
+        res.cookie('csrf-token', signed, {
+            httpOnly: true,
+            secure: process.env.RTE === 'prod',
+            sameSite: 'strict',
+            path: '/',
+        });
+    }
+    next();
+};
+
+export const validateCSRFToken = (req: Request, res: Response, next: NextFunction) => {
+    if (['GET', 'HEAD'].includes(req.method)) return next();
+
+    const csrfToken = req.body._csrf || req.headers['x-csrf-token'];
+    const cookieToken = req.cookies['csrf-token'];
+
+    if (!csrfToken || !cookieToken || !validateSignedCSRFToken(cookieToken)) {
+        res.status(403).json({ message: 'Invalid CSRF token' });
+        return;
+    }
+
+    const [tokenValue] = cookieToken.split('.');
+    if (csrfToken !== tokenValue) {
+        res.status(403).json({ message: 'CSRF token mismatch' });
+        return;
+    }
+
+    next();
+};

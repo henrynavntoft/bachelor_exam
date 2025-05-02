@@ -9,14 +9,14 @@ export const routes = {
     },
     events: {
         all: `${API_BASE}/events`,
-        byId: (id: string) => `${API_BASE}/events/${id}`,
+        one: (id: string) => `${API_BASE}/events/${id}`,
         delete: (id: string) => `${API_BASE}/events/${id}`,
         update: (id: string) => `${API_BASE}/events/${id}`,
         create: `${API_BASE}/events`,
     },
     users: {
         all: `${API_BASE}/users`,
-        byId: (id: string) => `${API_BASE}/users/${id}`,
+        one: (id: string) => `${API_BASE}/users/${id}`,
         delete: (id: string) => `${API_BASE}/users/${id}`,
         update: (id: string) => `${API_BASE}/users/${id}`,
     },
