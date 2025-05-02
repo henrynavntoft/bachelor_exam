@@ -1,9 +1,10 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import multer, { MulterError } from 'multer';
 import multerS3 from 'multer-s3';
 import s3 from '../lib/s3';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
+
 
 const router = Router();
 
@@ -32,8 +33,8 @@ const upload = multer({
 //////////////////////////////////////////////////////////////////////////////////
 // POST: Upload a single image
 router.post(
-    '/',
-    authorize(['ADMIN', 'HOST']),
+    '/:id',
+    authorize(['EVENT_OWNER']),
     (req: AuthenticatedRequest, res: Response) => {
         // Use multer explicitly to catch errors
         upload.single('image')(req, res, (err: unknown) => {
@@ -62,40 +63,44 @@ router.post(
 
 //////////////////////////////////////////////////////////////////////////////////
 // POST: Upload multiple images
-router.delete('/', authorize(['ADMIN', 'HOST']), async (req: Request, res: Response): Promise<void> => {
-    let keys = req.body.key;
+router.delete(
+    '/:id',
+    authorize(['EVENT_OWNER']),
+    async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+        let keys = req.body.key;
 
-    if (!keys) {
-        res.status(400).json({ error: 'Missing object key(s)' });
-        return;
-    }
-
-    // Allow for single string or array of keys
-    if (!Array.isArray(keys)) {
-        keys = [keys];
-    }
-
-    try {
-        for (const rawKey of keys) {
-            // Extract just the object key if a full URL is passed
-            const key = typeof rawKey === 'string' && rawKey.includes('/')
-                ? rawKey.split('/').pop()
-                : rawKey;
-
-            if (!key) continue;
-
-            const deleteCommand = new DeleteObjectCommand({
-                Bucket: process.env.LINODE_BUCKET_NAME!,
-                Key: key,
-            });
-            await s3.send(deleteCommand);
-            console.log(`Deleted object: ${key}`);
+        if (!keys) {
+            res.status(400).json({ error: 'Missing object key(s)' });
+            return;
         }
-        res.status(200).json({ message: 'File(s) deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting file(s):', error);
-        res.status(500).json({ error: 'Failed to delete file(s)' });
+
+        // Allow for single string or array of keys
+        if (!Array.isArray(keys)) {
+            keys = [keys];
+        }
+
+        try {
+            for (const rawKey of keys) {
+                // Extract just the object key if a full URL is passed
+                const key = typeof rawKey === 'string' && rawKey.includes('/')
+                    ? rawKey.split('/').pop()
+                    : rawKey;
+
+                if (!key) continue;
+
+                const deleteCommand = new DeleteObjectCommand({
+                    Bucket: process.env.LINODE_BUCKET_NAME!,
+                    Key: key,
+                });
+                await s3.send(deleteCommand);
+                console.log(`Deleted object: ${key}`);
+            }
+            res.status(200).json({ message: 'File(s) deleted successfully' });
+        } catch (error) {
+            console.error('Error deleting file(s):', error);
+            res.status(500).json({ error: 'Failed to delete file(s)' });
+        }
     }
-});
+);
 
 export default router;

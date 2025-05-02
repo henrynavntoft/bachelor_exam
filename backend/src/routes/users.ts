@@ -21,7 +21,7 @@ router.get('/', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Res
 
 //////////////////////////////////////////////////////////////////////////////////
 // GET: Get a single user by ID
-router.get('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:id', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: UserIdParam;
     try {
@@ -52,7 +52,7 @@ router.get('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: Authe
 
 //////////////////////////////////////////////////////////////////////////////////
 // PUT: Update a user
-router.put('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: UserIdParam;
     try {
@@ -96,7 +96,7 @@ router.put('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: Authe
 
 //////////////////////////////////////////////////////////////////////////////////
 // DELETE: Delete a user
-router.delete('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: UserIdParam;
     try {

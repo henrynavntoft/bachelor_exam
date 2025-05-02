@@ -52,6 +52,10 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
         res.status(400).json({ error: 'Invalid email or password' });
         return;
     }
+    if (user.isDeleted) {
+        res.status(403).json({ error: 'Account is deactivated' });
+        return;
+    }
     if (!(await bcrypt.compare(password, user.hashedPassword))) {
         res.status(400).json({ error: 'Invalid email or password' });
         return;
@@ -91,10 +95,14 @@ router.get('/me', authorize(), async (req: AuthenticatedRequest, res, next) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { id: true, firstName: true, lastName: true, email: true, role: true },
+            select: { id: true, firstName: true, lastName: true, email: true, role: true, isDeleted: true },
         });
         if (!user) {
             res.status(404).json({ error: 'User not found' });
+            return;
+        }
+        if (user.isDeleted) {
+            res.status(403).json({ error: 'Account is deactivated' });
             return;
         }
         res.json({ user });

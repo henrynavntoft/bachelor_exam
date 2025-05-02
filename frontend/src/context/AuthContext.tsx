@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
 
-interface User {
+export interface User {
     id: string;
+    firstName: string;
+    lastName: string;
     email: string;
     name: string;
     role: 'ADMIN' | 'HOST' | 'GUEST';

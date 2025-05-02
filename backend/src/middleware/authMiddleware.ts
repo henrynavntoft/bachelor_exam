@@ -1,9 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import type { CookieOptions } from 'express';
+import { prisma } from '../config/prisma';
+import { eventIdParamSchema } from '../schemas/eventSchema';
+import { ZodError, ZodIssue } from 'zod';
 
 // Supported user roles for authorization
 export type Role = 'ADMIN' | 'HOST' | 'GUEST';
+// include SELF for user-own resources, EVENT_OWNER for event ownership
+export type AuthRole = Role | 'SELF' | 'EVENT_OWNER';
 
 interface DecodedUser extends JwtPayload {
     userId: string;
@@ -38,12 +43,15 @@ const clearAuthState = (res: Response): void => {
 //////////////////////////////////////////////////////////////////////////////////
 /**
  * Authentication & Authorization middleware
- * @param roles Optional array of roles. If empty, only authentication is enforced.
- * @param allowSelf  Whether a user can access their own resource (by matching req.params.id to userId)
+ * @param roles Array of roles or 'SELF' to permit the resource owner.
  */
-export const authorize = (roles: Role[] = [], allowSelf: boolean = false) => {
-    return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const authorize = (roles: AuthRole[] = []) => {
+    return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
         const token = req.cookies?.authToken;
+        // Determine if resource-owner access is allowed
+        const allowSelf = roles.includes('SELF');
+        const allowedRoles = roles.filter((r): r is Role => r !== 'SELF' && r !== 'EVENT_OWNER');
+        const allowEventOwner = roles.includes('EVENT_OWNER');
 
         if (!token) {
             clearAuthState(res);
@@ -60,7 +68,7 @@ export const authorize = (roles: Role[] = [], allowSelf: boolean = false) => {
             req.user = decoded;
             res.locals.isLoggedIn = true;
             res.locals.role = decoded.role;
-            // Allow self-access if enabled and params.id matches userId
+            // Allow self-access when 'SELF' is specified
             if (
                 allowSelf &&
                 typeof req.params.id === 'string' &&
@@ -68,12 +76,38 @@ export const authorize = (roles: Role[] = [], allowSelf: boolean = false) => {
             ) {
                 return next();
             }
+            // Allow event-owner access when 'EVENT_OWNER' is specified
+            if (allowEventOwner) {
+                // validate and parse event ID
+                let params;
+                try {
+                    params = eventIdParamSchema.parse(req.params);
+                } catch (err: unknown) {
+                    if (err instanceof ZodError) {
+                        const message = err.errors.map((i: ZodIssue) => i.message).join(', ');
+                        res.status(400).json({ message });
+                        return;
+                    }
+                    throw err;
+                }
+                const event = await prisma.event.findUnique({ where: { id: params.id } });
+                if (event && event.hostId === decoded.userId) {
+                    return next();
+                }
+                res.status(403).json({ message: 'Forbidden' });
+                return;
+            }
 
-            // Fallback role check after self-access check
-            if (roles.length > 0 && !roles.includes(decoded.role as Role)) {
+            // Role-based check for non-self access
+            if (allowedRoles.length > 0 && !allowedRoles.includes(decoded.role as Role)) {
                 console.warn('Unauthorized access attempt by user with role:', decoded.role);
                 res.status(403).json({ message: 'Forbidden' });
                 return;
+            }
+
+            // Final ADMIN override (only if no event ownership was required or checked)
+            if (decoded.role === 'ADMIN') {
+                return next();
             }
 
             next();

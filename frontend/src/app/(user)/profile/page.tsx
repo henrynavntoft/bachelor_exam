@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth, User } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -23,20 +23,31 @@ import {
 } from "@/components/ui/alert-dialog";
 
 interface Event {
+    hostId: string;
     id: string;
     title: string;
     description: string;
     date: string;
     location: string;
-    image: string[];
     images: string[];
 }
 
+
 export default function ProfilePage() {
-    const { isAuthenticated, isHost, isGuest, isLoading } = useAuth();
+    const { isAuthenticated, isHost, isGuest, isLoading, user } = useAuth();
+    // Cast user to include profile fields
+    const currentUser = user as User;
     const router = useRouter();
     const queryClient = useQueryClient();
+
+    // Refs
+    const imageRef = useRef<HTMLInputElement>(null);
+    const createImageRef = useRef<HTMLInputElement>(null);
+
+    // Shared state
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+    // Edit form state
     const [formValues, setFormValues] = useState({
         title: '',
         description: '',
@@ -44,15 +55,20 @@ export default function ProfilePage() {
         location: '',
         images: [] as string[],
     });
-
-    // Add state to track images marked for deletion
     const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
-
-    // Add state to track preview images of newly selected files
     const [previewImages, setPreviewImages] = useState<string[]>([]);
 
-    const imageRef = useRef<HTMLInputElement>(null);
+    // Create form state
+    const [isCreating, setIsCreating] = useState(false);
+    const [createFormValues, setCreateFormValues] = useState({
+        title: '',
+        description: '',
+        date: '',
+        location: '',
+    });
+    const [createPreviewImages, setCreatePreviewImages] = useState<string[]>([]);
 
+    // Load host events
     const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
         queryKey: ['host-events'],
         queryFn: async () => {
@@ -62,135 +78,246 @@ export default function ProfilePage() {
         enabled: isAuthenticated && isHost,
     });
 
-    // Modify handleRemoveImage to mark image for deletion
-    async function handleRemoveImage(imageUrl: string) {
-        setFormValues((prev) => ({
-            ...prev,
-            images: prev.images.filter((url) => url !== imageUrl),
-        }));
-        setImagesToDelete((prev) => [...prev, imageUrl]);
-    }
 
-    // Handler to show previews when files are selected
-    const handleFileChange = () => {
-        const files = imageRef.current?.files;
-        if (files) {
-            const previews = Array.from(files).map((file) => URL.createObjectURL(file));
-            setPreviewImages(previews);
-        }
-    };
-
-    async function handleEditSubmit(e: React.FormEvent) {
-        e.preventDefault();
-        if (!selectedEventId) return;
-
-        let uploadedImageUrls: string[] = [];
-
-        const files = imageRef.current?.files;
-        if (files && files.length > 0) {
-            const uploads = Array.from(files).map(async (file) => {
-                const formData = new FormData();
-                formData.append('image', file);
-
-                const uploadRes = await axiosInstance.post(
-                    routes.upload.upload,
-                    formData,
-                    {
-                        headers: { 'Content-Type': 'multipart/form-data' },
-                        withCredentials: true,
-                    }
-                );
-
-                return uploadRes.data.url || uploadRes.data.location;
-            });
-
-            try {
-                uploadedImageUrls = await Promise.all(uploads);
-            } catch (uploadError) {
-                console.error('Image upload failed', uploadError);
-                return;
-            }
-        }
-
-        try {
-            await axiosInstance.put(
-                routes.events.update(selectedEventId),
-                {
-                    title: formValues.title,
-                    description: formValues.description,
-                    date: new Date(formValues.date),
-                    location: formValues.location,
-                    images: [...formValues.images, ...uploadedImageUrls],
-                },
-                { withCredentials: true }
-            );
-
-            // Perform image deletions after event update
-            await Promise.all(
-                imagesToDelete.map((imageUrl) => {
-                    const key = new URL(imageUrl).pathname.replace(/^\/?/, '');
-                    return axiosInstance.delete(routes.upload.delete, {
-                        data: { key },
-                        withCredentials: true,
-                    });
-                })
-            );
-
-            // Update the cached events data to reflect the edited event instantly
-            queryClient.setQueryData<Event[]>(['host-events'], (old) =>
-                old?.map(ev =>
-                    ev.id === selectedEventId
-                        ? { ...ev, ...formValues, images: [...formValues.images, ...uploadedImageUrls] }
-                        : ev
-                ) ?? []
-            );
-
-            // Clear form state
-            setSelectedEventId(null);
-            setFormValues({ title: '', description: '', date: '', location: '', images: [] });
-            setImagesToDelete([]);
-            setPreviewImages([]);
-        } catch (err) {
-            console.error("Update failed", err);
-        }
-    }
-
+    // Redirect unauthenticated
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
             router.push('/login');
         }
-    }, [isAuthenticated, router, isLoading]);
+    }, [isAuthenticated, isLoading, router]);
+
+    // Preview handlers
+    const handleFileChange = () => {
+        const files = imageRef.current?.files;
+        if (files) {
+            setPreviewImages(Array.from(files).map(f => URL.createObjectURL(f)));
+        }
+    };
+    const handleCreateFileChange = () => {
+        const files = createImageRef.current?.files;
+        if (files) {
+            setCreatePreviewImages(Array.from(files).map(f => URL.createObjectURL(f)));
+        }
+    };
+
+    // Mark existing image for deletion
+    function handleRemoveImage(url: string) {
+        setFormValues(v => ({ ...v, images: v.images.filter(i => i !== url) }));
+        setImagesToDelete(d => [...d, url]);
+    }
+
+    // Submit edits
+    async function handleEditSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!selectedEventId) return;
+
+        // upload new files
+        let uploadedUrls: string[] = [];
+        const files = imageRef.current?.files;
+        if (files && files.length) {
+            const ups = Array.from(files).map(async file => {
+                const fd = new FormData();
+                fd.append('image', file);
+                const up = await axiosInstance.post(
+                    routes.upload.upload(selectedEventId),
+                    fd,
+                    { headers: { 'Content-Type': 'multipart/form-data' } }
+                );
+                return up.data.url || up.data.location;
+            });
+            uploadedUrls = await Promise.all(ups);
+        }
+
+        // send update
+        await axiosInstance.put(
+            routes.events.update(selectedEventId),
+            {
+                title: formValues.title,
+                description: formValues.description,
+                date: new Date(formValues.date),
+                location: formValues.location,
+                images: [...formValues.images, ...uploadedUrls],
+            },
+            { withCredentials: true }
+        );
+        // delete removed images
+        await Promise.all(
+            imagesToDelete.map(url => {
+                const key = new URL(url).pathname.replace(/^\/?/, '');
+                return axiosInstance.delete(routes.upload.delete(selectedEventId), { data: { key } });
+            })
+        );
+        // refresh
+        await queryClient.invalidateQueries({ queryKey: ['host-events'] });
+
+        // reset
+        setSelectedEventId(null);
+        setFormValues({ title: '', description: '', date: '', location: '', images: [] });
+        setImagesToDelete([]);
+        setPreviewImages([]);
+    }
+
+    // Submit create
+    async function handleCreateSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        try {
+            // 1) create the event
+            const res = await axiosInstance.post(
+                routes.events.create,
+                {
+                    title: createFormValues.title,
+                    description: createFormValues.description,
+                    date: new Date(createFormValues.date),
+                    location: createFormValues.location,
+                },
+                { withCredentials: true }
+            );
+            const newEventId = res.data.id;
+
+            // 2) upload selected files
+            let uploadedUrls: string[] = [];
+            const files = createImageRef.current?.files;
+            if (files && files.length) {
+                const ups = Array.from(files).map(async file => {
+                    const fd = new FormData();
+                    fd.append('image', file);
+                    const up = await axiosInstance.post(
+                        routes.upload.upload(newEventId),
+                        fd,
+                        { headers: { 'Content-Type': 'multipart/form-data' } }
+                    );
+                    return up.data.url || up.data.location;
+                });
+                uploadedUrls = await Promise.all(ups);
+            }
+
+            // 3) attach images if any
+            if (uploadedUrls.length) {
+                await axiosInstance.put(
+                    routes.events.update(newEventId),
+                    { images: uploadedUrls },
+                    { withCredentials: true }
+                );
+            }
+
+            // refresh
+            await queryClient.invalidateQueries({ queryKey: ['host-events'] });
+
+            // reset
+            setCreateFormValues({ title: '', description: '', date: '', location: '' });
+            setCreatePreviewImages([]);
+            if (createImageRef.current) createImageRef.current.value = '';
+            setIsCreating(false);
+        } catch (err) {
+            console.error('Create event failed', err);
+        }
+    }
 
     if (isLoading || (isHost && eventsLoading)) {
         return <LoadingSpinner />;
     }
-
     if (!isHost && !isGuest) {
         return <LoadingSpinner />;
     }
 
-    if (isHost) {
-        return (
-            <div className="p-6">
-                <h1 className="text-2xl font-bold mb-4">Host Profile</h1>
-                <h2 className="text-xl mb-2">Your Events:</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {events.map((event) => (
-                        <Card key={event.id}>
-                            <CardContent className="flex flex-row justify-between">
-                                <div className="flex flex-col gap-2">
-                                    <h1>{event.title}</h1>
-                                    <p className="text-sm text-muted-foreground">{event.description}</p>
-                                    <p className="text-sm text-muted-foreground">{format(new Date(event.date), 'MM/dd/yyyy')}</p>
-                                    <p className="text-sm text-muted-foreground">{event.location}</p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {event.images.map((image) => (
-                                            <Image key={image} src={image} alt={event.title} width={100} height={100} />
-                                        ))}
-                                    </div>
-                                </div>
+    return isHost ? (
+        <div className="p-6">
+            <h1 className="text-2xl font-bold mb-4">Host Profile</h1>
+            <h2 className="text-xl mb-2">Your Events:</h2>
+            {/* User profile info */}
+            <div className="mb-6 p-4 bg-gray-50 rounded">
+                <h3 className="text-lg font-medium mb-2">Your Profile</h3>
+                <p><strong>Name:</strong> {currentUser.firstName} {currentUser.lastName}</p>
+                <p><strong>Email:</strong> {currentUser.email}</p>
+                <p><strong>Role:</strong> {currentUser.role}</p>
+                <p><strong>User ID</strong> {currentUser.id}</p>
+                <p><strong>Events Created:</strong> {events.filter(ev => ev.hostId === currentUser.id).length}</p>
+            </div>
 
-                                <CardFooter className="flex justify-end">
+            {/* CREATE EVENT */}
+            <AlertDialog open={isCreating} onOpenChange={setIsCreating}>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline">Create New Event</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Create Event</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Fill in the details below and click Create Event.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <form className="flex flex-col gap-4 p-4" onSubmit={handleCreateSubmit}>
+                        <input
+                            type="text"
+                            placeholder="Title"
+                            required
+                            value={createFormValues.title}
+                            onChange={e => setCreateFormValues(v => ({ ...v, title: e.target.value }))}
+                            className="border rounded p-2"
+                        />
+                        <textarea
+                            placeholder="Description"
+                            required
+                            value={createFormValues.description}
+                            onChange={e => setCreateFormValues(v => ({ ...v, description: e.target.value }))}
+                            className="border rounded p-2"
+                        />
+                        <input
+                            type="date"
+                            required
+                            value={createFormValues.date}
+                            onChange={e => setCreateFormValues(v => ({ ...v, date: e.target.value }))}
+                            className="border rounded p-2"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Location"
+                            required
+                            value={createFormValues.location}
+                            onChange={e => setCreateFormValues(v => ({ ...v, location: e.target.value }))}
+                            className="border rounded p-2"
+                        />
+
+                        {/* previews for create */}
+                        <div className="flex flex-wrap gap-2">
+                            {createPreviewImages.map((src, i) => (
+                                <Image key={i} src={src} alt="preview" width={80} height={80} className="rounded opacity-50" />
+                            ))}
+                        </div>
+                        <input
+                            type="file"
+                            multiple
+                            ref={createImageRef}
+                            onChange={handleCreateFileChange}
+                            className="border rounded p-2"
+                        />
+
+                        <AlertDialogCancel onClick={() => setIsCreating(false)}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button type="submit">Create Event</Button>
+                        </AlertDialogAction>
+                    </form>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* LIST & EDIT EVENTS */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+                {events.filter(ev => ev.hostId === currentUser.id).map(event => (
+                    <Card key={event.id}>
+                        <CardContent className="flex justify-between">
+                            <div>
+                                <h3 className="text-lg font-semibold">{event.title}</h3>
+                                <p className="text-sm text-muted-foreground">{event.description}</p>
+                                <p className="text-sm">{format(new Date(event.date), 'MM/dd/yyyy')}</p>
+                                <p className="text-sm">{event.location}</p>
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                    {event.images.map(img => (
+                                        <Image key={img} src={img} alt={event.title} width={80} height={80} className="rounded" />
+                                    ))}
+                                </div>
+                            </div>
+                            <CardFooter className="flex items-start">
+                                {event.hostId === currentUser.id && (
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button
@@ -205,96 +332,88 @@ export default function ProfilePage() {
                                                         images: event.images,
                                                     });
                                                     setPreviewImages([]);
-                                                    if (imageRef.current) {
-                                                        imageRef.current.value = '';
-                                                    }
+                                                    setImagesToDelete([]);
+                                                    if (imageRef.current) imageRef.current.value = '';
                                                 }}
                                             >
                                                 Edit
                                             </Button>
                                         </AlertDialogTrigger>
-                                        <AlertDialogContent className="p-2">
+                                        <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>Edit Event</AlertDialogTitle>
                                                 <AlertDialogDescription>
-                                                    Update the details below and click Save Changes.
+                                                    Update details and Save Changes.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
-
                                             <form className="flex flex-col gap-4 p-4" onSubmit={handleEditSubmit}>
                                                 <input
                                                     type="text"
+                                                    placeholder="Title"
                                                     value={formValues.title}
-                                                    onChange={(e) => setFormValues({ ...formValues, title: e.target.value })}
+                                                    onChange={e => setFormValues(v => ({ ...v, title: e.target.value }))}
                                                     className="border rounded p-2"
-                                                    placeholder="Event Title"
                                                 />
                                                 <textarea
+                                                    placeholder="Description"
                                                     value={formValues.description}
-                                                    onChange={(e) => setFormValues({ ...formValues, description: e.target.value })}
+                                                    onChange={e => setFormValues(v => ({ ...v, description: e.target.value }))}
                                                     className="border rounded p-2"
-                                                    placeholder="Event Description"
                                                 />
                                                 <input
                                                     type="date"
                                                     value={formValues.date}
-                                                    onChange={(e) => setFormValues({ ...formValues, date: e.target.value })}
+                                                    onChange={e => setFormValues(v => ({ ...v, date: e.target.value }))}
                                                     className="border rounded p-2"
                                                 />
                                                 <input
                                                     type="text"
+                                                    placeholder="Location"
                                                     value={formValues.location}
-                                                    onChange={(e) => setFormValues({ ...formValues, location: e.target.value })}
+                                                    onChange={e => setFormValues(v => ({ ...v, location: e.target.value }))}
                                                     className="border rounded p-2"
-                                                    placeholder="Event Location"
                                                 />
                                                 <div className="flex flex-wrap gap-2">
-                                                    {formValues.images.map((image) => (
-                                                        <div key={image} className="relative">
-                                                            <Image src={image} alt="event image" width={80} height={80} className="rounded" />
+                                                    {formValues.images.map(img => (
+                                                        <div key={img} className="relative">
+                                                            <Image src={img} alt="existing" width={80} height={80} className="rounded" />
                                                             <button
                                                                 type="button"
-                                                                onClick={() => handleRemoveImage(image)}
+                                                                onClick={() => handleRemoveImage(img)}
                                                                 className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded"
                                                             >
                                                                 ✕
                                                             </button>
                                                         </div>
                                                     ))}
-                                                    {previewImages.map((src, index) => (
-                                                        <div key={index} className="relative">
-                                                            <Image src={src} alt="preview" width={80} height={80} className="rounded opacity-50" />
-                                                        </div>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {previewImages.map((src, i) => (
+                                                        <Image key={i} src={src} alt="preview" width={80} height={80} className="rounded opacity-50" />
                                                     ))}
                                                 </div>
                                                 <input
                                                     type="file"
                                                     multiple
-                                                    className="border rounded p-2"
                                                     ref={imageRef}
                                                     onChange={handleFileChange}
+                                                    className="border rounded p-2"
                                                 />
-
-
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                 <AlertDialogAction asChild>
-                                                    <Button type="submit">
-                                                        Save Changes
-                                                    </Button>
+                                                    <Button type="submit">Save Changes</Button>
                                                 </AlertDialogAction>
                                             </form>
                                         </AlertDialogContent>
                                     </AlertDialog>
-                                </CardFooter>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                                )}
+                            </CardFooter>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
-        );
-    }
-
-    if (isGuest) {
-        return <div>Guest Profile</div>;
-    }
+        </div>
+    ) : (
+        <div>Guest Profile</div>
+    );
 }

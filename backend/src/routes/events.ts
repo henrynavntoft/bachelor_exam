@@ -5,6 +5,7 @@ import { prisma } from '../config/prisma';
 import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
 const router = Router();
 
+
 //////////////////////////////////////////////////////////////////////////////////
 // GET: Get all events
 router.get('/', async (req: Request, res: Response) => {
@@ -79,7 +80,7 @@ router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Res
 
 //////////////////////////////////////////////////////////////////////////////////
 // PUT: Update an event
-router.put('/:id', authorize(['HOST']), async (req: AuthenticatedRequest, res: Response) => {
+router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: EventIdParam;
     try {
@@ -113,10 +114,8 @@ router.put('/:id', authorize(['HOST']), async (req: AuthenticatedRequest, res: R
             res.status(404).json({ message: 'Event not found' });
             return;
         }
-        if (event.hostId !== req.user?.userId) {
-            res.status(403).json({ message: 'Forbidden: You can only update your own events.' });
-            return;
-        }
+        // Removed manual ownership check as verifyEventOwner handles it
+
         // Build partial update payload
         const updateData: {
             title?: string;
@@ -131,20 +130,22 @@ router.put('/:id', authorize(['HOST']), async (req: AuthenticatedRequest, res: R
         if (date !== undefined) updateData.date = date;  // already a Date from Zod coercion
         if (location !== undefined) updateData.location = location;
 
-        const updatedEvent = await prisma.event.update({
+        await prisma.event.update({
             where: { id },
             data: updateData,
         });
-        res.status(200).json(updatedEvent);
+
+        res.status(200).json("Event updated successfully");
     } catch (error) {
         console.error('Error updating event:', error);
         res.status(500).json({ message: 'Failed to update event' });
     }
-});
+}
+);
 
 //////////////////////////////////////////////////////////////////////////////////
 // DELETE: Delete an event
-router.delete('/:id', authorize(['HOST', 'ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
+router.delete('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: EventIdParam;
     try {
@@ -166,11 +167,7 @@ router.delete('/:id', authorize(['HOST', 'ADMIN']), async (req: AuthenticatedReq
             return;
         }
 
-        // If user is HOST, check ownership
-        if (req.user?.role === 'HOST' && event.hostId !== req.user?.userId) {
-            res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
-            return;
-        }
+        // Removed manual host/role check as verifyEventOwner handles it
 
         // If ADMIN, no extra checks needed - can delete any event
         await prisma.event.update({
