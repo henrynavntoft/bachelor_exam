@@ -1,7 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { loginSchema, signupSchema } from '../schemas/authSchema';
 import { ZodError, ZodIssue } from 'zod';
 import { prisma } from '../config/prisma';
@@ -25,7 +25,6 @@ const cookieOptions = {
     path: '/',
     maxAge: 60 * 60 * 1000,
 };
-
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +82,7 @@ router.post('/logout', (req, res) => {
 
 //////////////////////////////////////////////////////////////////////////////////
 // GET: Me
-router.get('/me', authenticateJWT(), async (req: AuthenticatedRequest, res, next) => {
+router.get('/me', authorize(), async (req: AuthenticatedRequest, res, next) => {
     if (!req.user) {
         res.json(null);
         return;

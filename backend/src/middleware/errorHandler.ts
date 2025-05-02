@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
+//////////////////////////////////////////////////////////////////////////////////
+// Global error handler middleware
 export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
     console.error('Error:', err.message);
     if (res.headersSent) return next(err);

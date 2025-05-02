@@ -1,14 +1,14 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { prisma } from '../config/prisma';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
-import { requireRole } from '../middleware/roleMiddleware';
+import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { ZodError, ZodIssue } from 'zod';
 import { userIdParamSchema, UserIdParam, updateUserSchema, UpdateUserInput } from '../schemas/userSchema';
 
 const router = Router();
 
-// GET all users (Admin only)
-router.get('/', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req: AuthenticatedRequest, res: Response) => {
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Get all users
+router.get('/', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const users = await prisma.user.findMany({ where: { isDeleted: false } });
         res.json(users);
@@ -19,8 +19,9 @@ router.get('/', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req: Au
     }
 });
 
-// Get a single user by ID
-router.get('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req: Request, res: Response) => {
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Get a single user by ID
+router.get('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: UserIdParam;
     try {
@@ -49,8 +50,9 @@ router.get('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req:
     }
 });
 
-// Update a user
-router.put('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req: Request, res: Response) => {
+//////////////////////////////////////////////////////////////////////////////////
+// PUT: Update a user
+router.put('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: UserIdParam;
     try {
@@ -92,8 +94,9 @@ router.put('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req:
     }
 });
 
-// Delete a user
-router.delete('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (req: Request, res: Response) => {
+//////////////////////////////////////////////////////////////////////////////////
+// DELETE: Delete a user
+router.delete('/:id', authorize(['ADMIN'], /* allowSelf */ true), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: UserIdParam;
     try {
@@ -113,7 +116,7 @@ router.delete('/:id', authenticateJWT(['ADMIN']), requireRole('ADMIN'), async (r
             where: { id },
             data: { isDeleted: true }
         });
-        res.status(204).send();
+        res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
         console.error('Error deleting user:', error);
         res.status(500).json({ message: 'Failed to delete user' });

@@ -2,11 +2,11 @@ import { createEventSchema, updateEventSchema, eventIdParamSchema, CreateEventIn
 import { ZodError, ZodIssue } from 'zod';
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
-import { requireRole } from '../middleware/roleMiddleware';
+import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
 const router = Router();
 
-// Get all events
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Get all events
 router.get('/', async (req: Request, res: Response) => {
     try {
         const events = await prisma.event.findMany({ where: { isDeleted: false } });
@@ -17,7 +17,8 @@ router.get('/', async (req: Request, res: Response) => {
     }
 });
 
-// Get a single event by ID
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Get a single event by ID
 router.get('/:id', async (req: Request, res: Response) => {
     // Validate ID param
     let params: { id: string };
@@ -45,8 +46,9 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 });
 
-// Create a new event
-router.post('/', authenticateJWT(['HOST']), requireRole('HOST'), async (req: AuthenticatedRequest, res: Response) => {
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Create a new event
+router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Response) => {
     // Validate body
     let body: CreateEventInput;
     try {
@@ -75,8 +77,9 @@ router.post('/', authenticateJWT(['HOST']), requireRole('HOST'), async (req: Aut
     }
 });
 
-// Update an event
-router.put('/:id', authenticateJWT(['HOST']), requireRole('HOST'), async (req: AuthenticatedRequest, res: Response) => {
+//////////////////////////////////////////////////////////////////////////////////
+// PUT: Update an event
+router.put('/:id', authorize(['HOST']), async (req: AuthenticatedRequest, res: Response) => {
     // Validate ID param
     let params: EventIdParam;
     try {
@@ -139,50 +142,48 @@ router.put('/:id', authenticateJWT(['HOST']), requireRole('HOST'), async (req: A
     }
 });
 
-// Delete an event
-router.delete(
-    '/:id',
-    authenticateJWT(['HOST', 'ADMIN']),
-    async (req: AuthenticatedRequest, res: Response) => {
-        // Validate ID param
-        let params: EventIdParam;
-        try {
-            params = eventIdParamSchema.parse(req.params);
-        } catch (err: unknown) {
-            if (err instanceof ZodError) {
-                const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
-                res.status(400).json({ error: errorMessage });
-                return;
-            }
-            throw err;
+//////////////////////////////////////////////////////////////////////////////////
+// DELETE: Delete an event
+router.delete('/:id', authorize(['HOST', 'ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
+    // Validate ID param
+    let params: EventIdParam;
+    try {
+        params = eventIdParamSchema.parse(req.params);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
         }
-        const { id } = params;
-        try {
-            const event = await prisma.event.findUnique({ where: { id } });
-
-            if (!event) {
-                res.status(404).json({ message: 'Event not found' });
-                return;
-            }
-
-            // If user is HOST, check ownership
-            if (req.user?.role === 'HOST' && event.hostId !== req.user?.userId) {
-                res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
-                return;
-            }
-
-            // If ADMIN, no extra checks needed - can delete any event
-            await prisma.event.update({
-                where: { id },
-                data: { isDeleted: true }, // soft delete!
-            });
-
-            res.status(204).send();
-        } catch (error) {
-            console.error('Error deleting event:', error);
-            res.status(500).json({ message: 'Failed to delete event' });
-        }
+        throw err;
     }
+    const { id } = params;
+    try {
+        const event = await prisma.event.findUnique({ where: { id } });
+
+        if (!event) {
+            res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        // If user is HOST, check ownership
+        if (req.user?.role === 'HOST' && event.hostId !== req.user?.userId) {
+            res.status(403).json({ message: 'Forbidden: You can only delete your own events.' });
+            return;
+        }
+
+        // If ADMIN, no extra checks needed - can delete any event
+        await prisma.event.update({
+            where: { id },
+            data: { isDeleted: true }, // soft delete!
+        });
+
+        res.status(204).send();
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        res.status(500).json({ message: 'Failed to delete event' });
+    }
+}
 );
 
 export default router;

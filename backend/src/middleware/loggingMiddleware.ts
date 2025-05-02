@@ -1,7 +1,8 @@
 
 import morgan from 'morgan';
 
-// Determine log format based on runtime environment
+//////////////////////////////////////////////////////////////////////////////////
+// Middleware to log HTTP requests and responses
 const format =
     process.env.RTE === 'prod' ? 'combined' :
         process.env.RTE === 'dev' ? 'dev' :

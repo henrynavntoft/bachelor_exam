@@ -6,7 +6,7 @@ import userRoutes from './routes/users';
 import eventRoutes from './routes/events';
 import authRoutes from './routes/auth';
 import uploadRoute from './routes/upload';
-import { generalLimiter } from './middleware/rateLimiter';
+import { authLimiter, generalLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import { securityMiddleware } from './middleware/headerMiddleware';
 import { attachCSRFToken, validateCSRFToken } from './middleware/csrfMiddleware';
@@ -33,7 +33,7 @@ app.get('/', (req: Request, res: Response) => {
 
 app.use('/api/users', validateCSRFToken, userRoutes);
 app.use('/api/events', validateCSRFToken, eventRoutes);
-app.use('/api/auth', validateCSRFToken, authRoutes);
+app.use('/api/auth', validateCSRFToken, authLimiter, authRoutes);
 app.use('/api/upload', validateCSRFToken, uploadRoute);
 
 app.get('/api/csrf-token', (req: Request, res: Response): void => {

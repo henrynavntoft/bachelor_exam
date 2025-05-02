@@ -10,12 +10,16 @@ if (!CSRF_SECRET) {
     throw new Error('CSRF_SECRET is not defined in .env');
 }
 
+//////////////////////////////////////////////////////////////////////////////////
+// Middleware to generate and validate CSRF tokens
 export const generateSignedCSRFToken = () => {
     const token = crypto.randomBytes(32).toString('hex');
     const signature = crypto.createHmac('sha256', CSRF_SECRET).update(token).digest('hex');
     return `${token}.${signature}`;
 };
 
+//////////////////////////////////////////////////////////////////////////////////
+// Middleware to validate CSRF tokens
 const validateSignedCSRFToken = (signedToken: string) => {
     const [token, signature] = signedToken.split('.');
     if (!token || !signature) return false;
@@ -24,6 +28,8 @@ const validateSignedCSRFToken = (signedToken: string) => {
     return signature === expectedSig;
 };
 
+//////////////////////////////////////////////////////////////////////////////////
+// Middleware to attach CSRF token to response cookies
 export const attachCSRFToken = (req: Request, res: Response, next: NextFunction) => {
     if (!req.cookies['csrf-token']) {
         const signed = generateSignedCSRFToken();
@@ -37,6 +43,8 @@ export const attachCSRFToken = (req: Request, res: Response, next: NextFunction)
     next();
 };
 
+//////////////////////////////////////////////////////////////////////////////////
+// Middleware to validate CSRF tokens
 export const validateCSRFToken = (req: Request, res: Response, next: NextFunction) => {
     if (['GET', 'HEAD'].includes(req.method)) return next();
 

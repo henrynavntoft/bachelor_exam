@@ -1,5 +1,7 @@
 import helmet from 'helmet';
 
+//////////////////////////////////////////////////////////////////////////////////
+// Middleware to set security headers
 export const securityMiddleware = helmet({
     // Enable HSTS for one year
     hsts: { maxAge: 31_536_000, includeSubDomains: true, preload: true },

@@ -3,7 +3,7 @@ import multer, { MulterError } from 'multer';
 import multerS3 from 'multer-s3';
 import s3 from '../lib/s3';
 import { DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { authenticateJWT, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
@@ -29,9 +29,11 @@ const upload = multer({
     }),
 });
 
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Upload a single image
 router.post(
     '/',
-    authenticateJWT(['ADMIN', 'HOST']),
+    authorize(['ADMIN', 'HOST']),
     (req: AuthenticatedRequest, res: Response) => {
         // Use multer explicitly to catch errors
         upload.single('image')(req, res, (err: unknown) => {
@@ -58,8 +60,9 @@ router.post(
     }
 );
 
-// In the future, support for deleting multiple images at once (bulk deletion) can be added here.
-router.delete('/', authenticateJWT(['ADMIN', 'HOST']), async (req: Request, res: Response): Promise<void> => {
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Upload multiple images
+router.delete('/', authorize(['ADMIN', 'HOST']), async (req: Request, res: Response): Promise<void> => {
     let keys = req.body.key;
 
     if (!keys) {
