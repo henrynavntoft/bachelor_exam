@@ -64,12 +64,14 @@ export const validateCSRFToken = (req: Request, res: Response, next: NextFunctio
     const cookieToken = req.cookies['csrf-token'];
 
     if (!csrfToken || !cookieToken || !validateSignedCSRFToken(cookieToken)) {
+        res.clearCookie('csrf-token', { path: '/' });
         res.status(403).json({ message: 'Invalid CSRF token' });
         return;
     }
 
     const [tokenValue] = cookieToken.split('.');
     if (csrfToken !== tokenValue) {
+        res.clearCookie('csrf-token', { path: '/' });
         res.status(403).json({ message: 'CSRF token mismatch' });
         return;
     }
