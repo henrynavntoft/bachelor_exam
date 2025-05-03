@@ -2,3 +2,5 @@ node_modules
 pgdate
 .env.*
 nginx
+pgdata
+nginx
