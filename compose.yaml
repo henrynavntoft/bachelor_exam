@@ -20,6 +20,7 @@ services:
     container_name: backend
     volumes:
     - ./backend:/app:cached
+    - /app/node_modules
     build:
       context: ./backend
       dockerfile: backend.dockerfile
