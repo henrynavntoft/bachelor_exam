@@ -36,7 +36,7 @@ export const attachCSRFToken = (req: Request, res: Response, next: NextFunction)
         res.cookie('csrf-token', signed, {
             httpOnly: true,
             secure: process.env.RTE === 'prod',
-            sameSite: 'strict',
+            sameSite: 'none',
             path: '/',
         });
     }

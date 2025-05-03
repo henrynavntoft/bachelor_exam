@@ -18,6 +18,8 @@ import { loggingMiddleware } from './middleware/loggingMiddleware';
 dotenv.config({ path: './.env' });
 
 const app: Express = express();
+// Trust reverse proxies (e.g. Nginx) so rate-limit and CSRF middleware see correct headers
+app.set('trust proxy', true);
 
 app.use(generalLimiter);
 app.use(securityMiddleware);
