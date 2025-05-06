@@ -305,7 +305,7 @@ export default function ProfilePage() {
     }
 
     return isHost ? (
-        <div className="p-6">
+        <article className="p-6">
             <h1 className="text-2xl font-bold mb-4">Host Profile</h1>
             <h2 className="text-xl mb-2">Your Events:</h2>
 
@@ -618,8 +618,48 @@ export default function ProfilePage() {
                     </Card>
                 ))}
             </div>
-        </div>
+        </article>
     ) : (
-        <div>Guest Profile</div>
+        <article className="p-6">
+            <h1>Guest Profile</h1>
+            <p>The guest should be able to the see events they have RSVPed to. They should also be able to edit their profile information.
+            </p>
+            <h2>Edit Profile</h2>
+            <Form {...profileForm}>
+                <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)}>
+                    <FormField
+                        control={profileForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>First Name</FormLabel>
+                                <FormControl>
+                                    <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={profileForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Last Name</FormLabel>
+                                <FormControl>
+                                    <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <Button type="submit">Save Profile</Button>
+                </form>
+            </Form>
+
+
+
+        </article>
     );
 }

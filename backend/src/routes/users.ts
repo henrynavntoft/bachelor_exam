@@ -10,7 +10,7 @@ const router = Router();
 // GET: Get all users
 router.get('/', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const users = await prisma.user.findMany({ where: { isDeleted: false } });
+        const users = await prisma.user.findMany();
         res.json(users);
     } catch (error) {
         console.error("Error fetching users:", error);
@@ -79,12 +79,23 @@ router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReques
         }
         throw err;
     }
-    const { firstName, lastName, email } = body;
+    const { firstName, lastName, email, isDeleted } = body;
+
+    // Check if user is trying to update isDeleted without admin privileges
+    if (isDeleted !== undefined && req.user?.role !== 'ADMIN') {
+        res.status(403).json({ error: 'Only administrators can update the isDeleted field' });
+        return;
+    }
 
     try {
         const updatedUser = await prisma.user.update({
             where: { id },
-            data: { firstName, lastName, email },
+            data: {
+                firstName,
+                lastName,
+                email,
+                ...(isDeleted !== undefined && req.user?.role === 'ADMIN' ? { isDeleted } : {}),
+            },
         });
         res.status(200).json(updatedUser);
     } catch (error) {

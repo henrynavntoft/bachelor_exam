@@ -28,6 +28,7 @@ interface User {
     email: string;
     name: string;
     role: string;
+    isDeleted: boolean;
 }
 
 interface Event {
@@ -80,6 +81,28 @@ export default function DashboardPage() {
         }
     });
 
+    const reactivateUserMutation = useMutation({
+        mutationFn: async (userId: string) => {
+            const user = users.find(u => u.id === userId);
+            if (!user) throw new Error('User not found');
+
+            return axiosInstance.put(
+                routes.users.update(userId),
+                {
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    role: user.role,
+                    isDeleted: false
+                },
+                { withCredentials: true }
+            );
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+        },
+    });
+
 
     useEffect(() => {
         if (!isLoading && (!isAuthenticated || !isAdmin)) {
@@ -111,7 +134,14 @@ export default function DashboardPage() {
                                 <div className="font-semibold">{user.firstName} {user.lastName}</div>
                                 <div>{user.email}</div>
                                 <div className="text-sm text-gray-500 capitalize">{user.role}</div>
+                                <div className="text-sm text-gray-500 capitalize">{user.isDeleted ? 'Deleted' : 'Active'}</div>
                             </div>
+                            {user.isDeleted && (
+                                <Button variant="outline" onClick={() => reactivateUserMutation.mutate(user.id)}>
+                                    Reactivate
+                                </Button>
+                            )}
+
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                     <Button variant="destructive">Delete</Button>

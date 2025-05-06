@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt, { JwtPayload } from 'jsonwebtoken';
 import type { CookieOptions } from 'express';
 import { prisma } from '../config/prisma';
-import { eventIdParamSchema } from '../schemas/eventSchema';
+import { eventIdParamSchema } from '../schemas/eventSchema'; // Assuming this validates { id: string }
 import { ZodError, ZodIssue } from 'zod';
 
 // Supported user roles for authorization
@@ -11,112 +11,153 @@ export type Role = 'ADMIN' | 'HOST' | 'GUEST';
 export type AuthRole = Role | 'SELF' | 'EVENT_OWNER';
 
 interface DecodedUser extends JwtPayload {
-    userId: string;
-    role: string;
+    userId: string; // Assuming your JWT payload includes the user's ID as userId
+    role: Role; // Assuming your JWT payload includes the user's role
 }
 
 export interface AuthenticatedRequest extends Request {
-    user?: DecodedUser;
+    user?: DecodedUser; // Attach the decoded user to the request object
 }
 
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is not defined.');
-const isProduction = process.env.RTE === 'prod';
+if (!JWT_SECRET) {
+    // Ideally, this check happens once at application startup
+    console.error('FATAL ERROR: JWT_SECRET environment variable is not defined.');
+    process.exit(1); // Or handle this error appropriately during startup
+}
+const isProduction = process.env.RTE === 'prod'; // Use RTE for production
 
 // Standard options for the authToken cookie
 const AUTH_COOKIE_OPTIONS: CookieOptions = {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/',
+    httpOnly: true, // Prevent client-side JavaScript access
+    secure: isProduction, // Only send over HTTPS in production
+    sameSite: isProduction ? 'none' : 'lax', // 'none' requires secure: true
+    path: '/', // Available across the whole site
 };
 
 /**
  * Clear the authToken cookie and reset auth-related locals
  */
 const clearAuthState = (res: Response): void => {
-    res.clearCookie('authToken', AUTH_COOKIE_OPTIONS);
+    // Setting a short expiry time is a common way to clear a cookie
+    res.cookie('authToken', '', { ...AUTH_COOKIE_OPTIONS, expires: new Date(0) });
+    // Alternative using clearCookie, potentially cleaner:
+    // res.clearCookie('authToken', AUTH_COOKIE_OPTIONS); // Ensure options match setCookie
     res.locals.isLoggedIn = false;
     res.locals.role = null;
+    // Clear user from request object as well
+    // delete (res as AuthenticatedRequest).user; // This might require casting
 };
 
 //////////////////////////////////////////////////////////////////////////////////
 /**
  * Authentication & Authorization middleware
- * @param roles Array of roles or 'SELF' to permit the resource owner.
+ * Checks for JWT, authenticates user, and authorizes based on specified roles or ownership.
+ * @param roles Array of roles or 'SELF'/'EVENT_OWNER' to permit the resource owner. Empty array means authentication is optional.
  */
 export const authorize = (roles: AuthRole[] = []) => {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {
         const token = req.cookies?.authToken;
-        // Determine if resource-owner access is allowed
-        const allowSelf = roles.includes('SELF');
-        const allowedRoles = roles.filter((r): r is Role => r !== 'SELF' && r !== 'EVENT_OWNER');
-        const allowEventOwner = roles.includes('EVENT_OWNER');
+        const authRequired = roles.length > 0; // Is authorization required for this route?
 
         if (!token) {
             clearAuthState(res);
-            if (roles.length > 0) {
-                res.status(401).json({ message: 'Unauthorized' });
+            if (authRequired) {
+                // If token is required but not present
+                res.status(401).json({ message: 'Authentication token required.' });
             } else {
+                // If auth is optional, just proceed with unauthenticated state
                 next();
             }
             return;
         }
 
         try {
+            // Verify the token
             const decoded = jwt.verify(token, JWT_SECRET) as DecodedUser;
-            req.user = decoded;
+            req.user = decoded; // Attach authenticated user to request
             res.locals.isLoggedIn = true;
             res.locals.role = decoded.role;
-            // Allow self-access when 'SELF' is specified
-            if (
-                allowSelf &&
-                typeof req.params.id === 'string' &&
-                req.params.id === decoded.userId
-            ) {
+
+            // --- Authorization Logic ---
+
+            // If no specific roles or ownership are required, authentication is enough.
+            if (!authRequired) {
                 return next();
             }
-            // Allow event-owner access when 'EVENT_OWNER' is specified
-            if (allowEventOwner) {
-                // validate and parse event ID
+
+            let isAuthorized = false; // Flag to track if any authorization condition is met
+
+            // 1. ADMIN Override: Admins are always authorized if authentication succeeds
+            if (decoded.role === 'ADMIN') {
+                isAuthorized = true;
+            }
+
+            // 2. SELF Ownership Check (e.g., user profile)
+            const allowSelf = roles.includes('SELF');
+            if (!isAuthorized && allowSelf) {
+                // Ensure id param exists and matches authenticated user's ID
+                if (req.params.id && typeof req.params.id === 'string' && req.params.id === decoded.userId) {
+                    isAuthorized = true;
+                }
+            }
+
+            // 3. EVENT_OWNER Ownership Check (e.g., modifying an event)
+            const allowEventOwner = roles.includes('EVENT_OWNER');
+            if (!isAuthorized && allowEventOwner) {
+                // Validate and parse the event ID from params
                 let params;
                 try {
-                    params = eventIdParamSchema.parse(req.params);
+                    params = eventIdParamSchema.parse(req.params); // Expects { id: string }
                 } catch (err: unknown) {
                     if (err instanceof ZodError) {
+                        // If the ID param is invalid, it cannot be an event owner check
                         const message = err.errors.map((i: ZodIssue) => i.message).join(', ');
-                        res.status(400).json({ message });
-                        return;
+                        res.status(400).json({ message: `Invalid parameter: ${message}` });
+                        return; // Stop here as the input is invalid
                     }
+                    // Re-throw other unexpected errors
                     throw err;
                 }
+
+                // Find the event and check if the authenticated user is the host
                 const event = await prisma.event.findUnique({ where: { id: params.id } });
                 if (event && event.hostId === decoded.userId) {
-                    return next();
+                    isAuthorized = true;
                 }
-                res.status(403).json({ message: 'Forbidden' });
-                return;
+                // Note: If event is not found, or user is not host, isAuthorized remains false.
+                // The final check will handle denying access if needed.
             }
 
-            // Role-based check for non-self access
-            if (allowedRoles.length > 0 && !allowedRoles.includes(decoded.role as Role)) {
-                console.warn('Unauthorized access attempt by user with role:', decoded.role);
-                res.status(403).json({ message: 'Forbidden' });
-                return;
+            // 4. Role-Based Check (e.g., 'HOST' for creating events)
+            // Exclude SELF and EVENT_OWNER from the roles array for this check
+            const allowedRoles = roles.filter((r): r is Role => r !== 'SELF' && r !== 'EVENT_OWNER');
+            if (!isAuthorized && allowedRoles.length > 0) {
+                if (allowedRoles.includes(decoded.role)) {
+                    isAuthorized = true;
+                }
             }
 
-            // Final ADMIN override (only if no event ownership was required or checked)
-            if (decoded.role === 'ADMIN') {
-                return next();
-            }
+            // --- Final Decision ---
 
-            next();
-        } catch (error) {
-            console.error('JWT verification failed:', error);
-            clearAuthState(res);
-            if (roles.length > 0) {
-                res.status(401).json({ message: 'Unauthorized' });
+            if (isAuthorized) {
+                // User is authenticated and meets at least one required authorization condition
+                next();
             } else {
+                // User is authenticated but does NOT meet any required authorization condition
+                console.warn(`Authorization denied for user ${decoded.userId} (Role: ${decoded.role}) on route ${req.method} ${req.path}. Required: [${roles.join(', ')}]`);
+                res.status(403).json({ message: 'Forbidden' });
+            }
+
+        } catch (error) {
+            // Handle JWT verification failures (expired, invalid signature, etc.)
+            console.error('JWT verification failed:', error instanceof Error ? error.message : error);
+            clearAuthState(res); // Clear potentially invalid token
+            if (authRequired) {
+                // If auth was required, respond with unauthorized
+                res.status(401).json({ message: 'Invalid or expired token. Please log in again.' });
+            } else {
+                // If auth was optional, just clear state and proceed
                 next();
             }
         }
