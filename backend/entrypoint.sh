@@ -6,6 +6,9 @@ echo "== Backend running in $RTE mode =="
 
 echo "== Generating Prisma Client =="
 npx prisma generate
+# When new changes are made to the schema, run this to reset db
+npx prisma migrate reset --force
+
 
 if [ "$RTE" = "prod" ]; then
   echo "== Running Prisma Migrate =="
