@@ -35,6 +35,8 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
+import { toast } from "sonner";
+import EventCard from "@/app/components/Card";
 
 // Interfaces
 interface Event {
@@ -45,6 +47,10 @@ interface Event {
     date: string;
     location: string;
     images: string[];
+    attendees?: Array<{
+        userId: string;
+        eventId: string;
+    }>;
 }
 
 // Zod Schemas
@@ -131,6 +137,29 @@ export default function ProfilePage() {
         },
         enabled: isAuthenticated && isHost,
     });
+
+    // Fetch events the user has RSVPed to
+    const { data: rsvpedEvents, isLoading: isLoadingEvents } = useQuery<Event[]>({
+        queryKey: ["rsvpedEvents"],
+        queryFn: async () => {
+            const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
+            // Filter events where the user is an attendee
+            return res.data.filter((event: Event) =>
+                event.attendees?.some(attendee => attendee.userId === user?.id)
+            );
+        },
+        enabled: !!user,
+    });
+
+    // Add a query client subscription to refresh RSVPed events when attendance changes
+    useEffect(() => {
+        const unsubscribe = queryClient.getQueryCache().subscribe(() => {
+            if (queryClient.getQueryData(['attendance'])) {
+                queryClient.invalidateQueries({ queryKey: ['rsvpedEvents'] });
+            }
+        });
+        return () => unsubscribe();
+    }, [queryClient]);
 
     // Redirect unauthenticated
     useEffect(() => {
@@ -282,8 +311,10 @@ export default function ProfilePage() {
                 user.lastName = data.lastName;
             }
             setIsEditingProfile(false);
+            toast.success("Profile updated successfully");
         } catch (err) {
             console.error('Update profile failed', err);
+            toast.error("Failed to update profile");
         }
     }
 
@@ -658,8 +689,22 @@ export default function ProfilePage() {
                 </form>
             </Form>
 
-
-
+            <div className="p-6">
+                <h2 className="text-xl font-semibold mb-6">Events You&apos;re Attending</h2>
+                {isLoadingEvents ? (
+                    <div className="flex justify-center py-8">
+                        <LoadingSpinner />
+                    </div>
+                ) : rsvpedEvents && rsvpedEvents.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {rsvpedEvents.map((event) => (
+                            <EventCard key={event.id} event={event} />
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-gray-600">You haven&apos;t RSVPed to any events yet.</p>
+                )}
+            </div>
         </article>
     );
 }

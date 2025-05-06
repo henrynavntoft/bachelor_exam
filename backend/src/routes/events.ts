@@ -10,7 +10,12 @@ const router = Router();
 // GET: Get all events
 router.get('/', async (req: Request, res: Response) => {
     try {
-        const events = await prisma.event.findMany({ where: { isDeleted: false } });
+        const events = await prisma.event.findMany({
+            where: { isDeleted: false },
+            include: {
+                attendees: true
+            }
+        });
         res.status(200).json(events);
     } catch (error) {
         console.error('Error fetching events:', error);
@@ -35,7 +40,12 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
     const { id } = params;
     try {
-        const event = await prisma.event.findUnique({ where: { id } });
+        const event = await prisma.event.findUnique({
+            where: { id },
+            include: {
+                attendees: true
+            }
+        });
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
             return;
@@ -192,4 +202,92 @@ router.delete('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedReque
         res.status(500).json({ message: 'Failed to delete event' });
     }
 });
+
+// RSVP to an event
+router.post('/:id/attend', authorize(['GUEST']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const eventId = req.params.id;
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+
+        // Check if event exists
+        const event = await prisma.event.findUnique({
+            where: { id: eventId },
+        });
+
+        if (!event) {
+            res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        // Check if user has already RSVPed
+        const existingRSVP = await prisma.attendee.findFirst({
+            where: {
+                userId,
+                eventId,
+            },
+        });
+
+        if (existingRSVP) {
+            res.status(400).json({ message: 'You have already RSVPed to this event' });
+            return;
+        }
+
+        // Create RSVP
+        const rsvp = await prisma.attendee.create({
+            data: {
+                userId,
+                eventId,
+            },
+        });
+
+        res.status(201).json(rsvp);
+    } catch (error) {
+        console.error('Error creating RSVP:', error);
+        res.status(500).json({ message: 'Error creating RSVP' });
+    }
+});
+
+// Cancel RSVP
+router.delete('/:id/attend', authorize(['GUEST']), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const eventId = req.params.id;
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            res.status(401).json({ message: 'Unauthorized' });
+            return;
+        }
+
+        // Check if RSVP exists
+        const rsvp = await prisma.attendee.findFirst({
+            where: {
+                userId,
+                eventId,
+            },
+        });
+
+        if (!rsvp) {
+            res.status(404).json({ message: 'RSVP not found' });
+            return;
+        }
+
+        // Delete RSVP
+        await prisma.attendee.delete({
+            where: {
+                id: rsvp.id,
+            },
+        });
+
+        res.status(200).json({ message: 'RSVP cancelled successfully' });
+    } catch (error) {
+        console.error('Error cancelling RSVP:', error);
+        res.status(500).json({ message: 'Error cancelling RSVP' });
+    }
+});
+
 export default router;

@@ -18,5 +18,6 @@ if [ "$RTE" = "prod" ]; then
   npm start
 else
   echo "=== Development Mode ==="
-  npm run dev
+  npm run dev &
+  npx prisma studio
 fi
