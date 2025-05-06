@@ -73,6 +73,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
             lastName: user.lastName,
             email: user.email,
             role: user.role,
+            profilePicture: user.profilePicture,
         },
     });
 });
@@ -95,7 +96,7 @@ router.get('/me', authorize(), async (req: AuthenticatedRequest, res, next) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { id: true, firstName: true, lastName: true, email: true, role: true, isDeleted: true },
+            select: { id: true, firstName: true, lastName: true, email: true, role: true, isDeleted: true, profilePicture: true },
         });
         if (!user) {
             res.status(404).json({ error: 'User not found' });
@@ -128,7 +129,7 @@ router.post('/signup', async (req: Request, res, next) => {
         return next(err as Error);
     }
 
-    const { firstName, lastName, email, password, role } = parsed;
+    const { firstName, lastName, email, password, role, profilePicture } = parsed;
     try {
         const exists = await prisma.user.findUnique({ where: { email } });
         if (exists) {
@@ -138,7 +139,7 @@ router.post('/signup', async (req: Request, res, next) => {
 
         const hashed = await bcrypt.hash(password, 14);
         const user = await prisma.user.create({
-            data: { firstName, lastName, email, hashedPassword: hashed, role },
+            data: { firstName, lastName, email, hashedPassword: hashed, role, profilePicture },
         });
 
         res.status(201).json({ user });

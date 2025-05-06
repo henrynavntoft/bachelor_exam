@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       {
         hostname: 'mg-storage.eu-central-1.linodeobjects.com',
       },
+      {
+        hostname: 'robohash.org',
+      },
     ],
   },
 };

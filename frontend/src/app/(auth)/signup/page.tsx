@@ -21,13 +21,14 @@ export default function Signup() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [role, setRole] = useState('GUEST');
+    const [profilePicture, setProfilePicture] = useState('');
     const [error, setError] = useState('');
 
     const signupMutation = useMutation({
         mutationFn: async () => {
             await axiosInstance.post(
                 routes.auth.signup,
-                { firstName, lastName, email, password, confirmPassword, role },
+                { firstName, lastName, email, password, confirmPassword, role, profilePicture },
                 { withCredentials: true }
             );
         },
@@ -95,6 +96,12 @@ export default function Signup() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
+                />
+                <Input
+                    type="text"
+                    placeholder="Profile Picture URL"
+                    value={profilePicture}
+                    onChange={(e) => setProfilePicture(e.target.value)}
                 />
                 <select
                     value={role}

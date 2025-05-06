@@ -26,7 +26,6 @@ model User {
   lastName        String
   email           String     @unique
   hashedPassword  String
-  phoneNumber     String?
   profilePicture  String?
   role            Role       @default(GUEST)
   hostedEvents    Event[]    @relation("HostEvents")

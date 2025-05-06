@@ -66,6 +66,7 @@ export default function EventPage() {
             // Invalidate queries to refresh the data
             await queryClient.invalidateQueries({ queryKey: ["event", eventId] });
             await queryClient.invalidateQueries({ queryKey: ["events"] });
+            await queryClient.invalidateQueries({ queryKey: ["rsvpedEvents"] });
         } catch (error) {
             console.error('Error updating attendance:', error);
             if (error instanceof AxiosError) {

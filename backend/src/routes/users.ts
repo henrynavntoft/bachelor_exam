@@ -123,6 +123,22 @@ router.delete('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReq
     const { id } = params;
 
     try {
+        // First check if the user is an admin
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: { role: true }
+        });
+
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+
+        if (user.role === 'ADMIN') {
+            res.status(403).json({ message: 'Admin users cannot be deleted' });
+            return;
+        }
+
         await prisma.user.update({
             where: { id },
             data: { isDeleted: true }

@@ -12,6 +12,7 @@ export interface User {
     email: string;
     name: string;
     role: 'ADMIN' | 'HOST' | 'GUEST';
+    profilePicture: string;
 }
 
 interface AuthContextProps {

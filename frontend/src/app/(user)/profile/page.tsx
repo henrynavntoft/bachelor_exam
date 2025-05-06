@@ -653,8 +653,9 @@ export default function ProfilePage() {
     ) : (
         <article className="p-6">
             <h1>Guest Profile</h1>
-            <p>The guest should be able to the see events they have RSVPed to. They should also be able to edit their profile information.
-            </p>
+            {currentUser.profilePicture && (
+                <Image src={currentUser.profilePicture} alt="Profile Picture" width={100} height={100} />
+            )}
             <h2>Edit Profile</h2>
             <Form {...profileForm}>
                 <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)}>

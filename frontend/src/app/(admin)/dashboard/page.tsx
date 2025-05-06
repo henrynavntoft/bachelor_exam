@@ -21,6 +21,8 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Card, CardContent } from "@/components/ui/card";
+import Image from 'next/image';
+
 interface User {
     id: string;
     firstName: string;
@@ -29,6 +31,7 @@ interface User {
     name: string;
     role: string;
     isDeleted: boolean;
+    profilePicture: string;
 }
 
 interface Event {
@@ -40,7 +43,7 @@ interface Event {
 }
 
 export default function DashboardPage() {
-    const { isAuthenticated, isAdmin, isLoading } = useAuth();
+    const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
     const router = useRouter();
     const { data: users = [], isLoading: usersLoading, error } = useQuery<User[]>({
         queryKey: ['users'],
@@ -124,6 +127,12 @@ export default function DashboardPage() {
 
     return (
         <div className="p-6">
+            <div className="flex flex-row justify-between items-center gap-2">
+                <p>{user?.email}</p>
+                {user?.profilePicture && (
+                    <Image src={user.profilePicture} alt="Profile Picture" width={50} height={50} />
+                )}
+            </div>
             <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
             <h2 className="text-2xl font-semibold mb-4">All Users:</h2>
             <div className="grid gap-4">
