@@ -126,9 +126,9 @@ export default function DashboardPage() {
     }
 
     return (
-        <div className="p-6">
+        <article>
             <div className="flex flex-row justify-between items-center gap-2">
-                <p>{user?.email}</p>
+                <p>{user?.firstName} {user?.lastName}</p>
                 {user?.profilePicture && (
                     <Image src={user.profilePicture} alt="Profile Picture" width={50} height={50} />
                 )}
@@ -209,6 +209,6 @@ export default function DashboardPage() {
                     </Card>
                 ))}
             </div>
-        </div>
+        </article>
     );
 }

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -110,12 +111,18 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
 }
-

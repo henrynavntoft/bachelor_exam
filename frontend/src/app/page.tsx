@@ -13,6 +13,16 @@ interface Event {
   images: string[];
   date: string;
   location: string;
+  hostId: string;
+  host: {
+    firstName: string;
+    lastName: string;
+    profilePicture: string;
+  };
+  attendees: {
+    userId: string;
+    eventId: string;
+  }[];
 }
 
 export default function Home() {
@@ -26,19 +36,17 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center">
-        <LoadingSpinner />
-      </main>
+      <LoadingSpinner />
     );
   }
 
   return (
-    <main className="p-4">
+    <article>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {events.map((event) => (
           <Card key={event.id} event={event} />
         ))}
       </div>
-    </main>
+    </article>
   );
 }

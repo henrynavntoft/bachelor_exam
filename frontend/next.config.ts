@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        hostname: 'picsum.photos',
+        hostname: 'fastly.picsum.photos',
       },
       {
         hostname: 'mg-storage.eu-central-1.linodeobjects.com',

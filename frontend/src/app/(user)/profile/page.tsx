@@ -57,6 +57,7 @@ interface Event {
 const profileSchema = z.object({
     firstName: z.string().min(2, "First name is required"),
     lastName: z.string().min(2, "Last name is required"),
+    profilePicture: z.string().optional(),
 });
 
 const eventSchema = z.object({
@@ -115,6 +116,7 @@ export default function ProfilePage() {
         defaultValues: {
             firstName: currentUser?.firstName || '',
             lastName: currentUser?.lastName || '',
+            profilePicture: currentUser?.profilePicture || '',
         },
     });
 
@@ -124,6 +126,7 @@ export default function ProfilePage() {
             profileForm.reset({
                 firstName: currentUser.firstName,
                 lastName: currentUser.lastName,
+                profilePicture: currentUser.profilePicture,
             });
         }
     }, [currentUser, profileForm]);
@@ -652,13 +655,8 @@ export default function ProfilePage() {
         </article>
     ) : (
         <article className="p-6">
-            <h1>Guest Profile</h1>
-            {currentUser.profilePicture && (
-                <Image src={currentUser.profilePicture} alt="Profile Picture" width={100} height={100} />
-            )}
-            <h2>Edit Profile</h2>
             <Form {...profileForm}>
-                <form onSubmit={profileForm.handleSubmit(handleProfileSubmit)}>
+                <form className="flex flex-col gap-4" onSubmit={profileForm.handleSubmit(handleProfileSubmit)}>
                     <FormField
                         control={profileForm.control}
                         name="firstName"
@@ -685,13 +683,26 @@ export default function ProfilePage() {
                             </FormItem>
                         )}
                     />
+                    <FormField
+                        control={profileForm.control}
+                        name="profilePicture"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Profile Picture</FormLabel>
+                                <FormControl>
+                                    <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
                     <Button type="submit">Save Profile</Button>
                 </form>
             </Form>
 
-            <div className="p-6">
-                <h2 className="text-xl font-semibold mb-6">Events You&apos;re Attending</h2>
+            <div className="pt-6">
+                <h2 className="text-xl font-semibold mb-2">Events You&apos;re Attending</h2>
                 {isLoadingEvents ? (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner />

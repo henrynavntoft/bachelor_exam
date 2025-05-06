@@ -79,7 +79,7 @@ router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReques
         }
         throw err;
     }
-    const { firstName, lastName, email, isDeleted } = body;
+    const { firstName, lastName, email, profilePicture, isDeleted } = body;
 
     // Check if user is trying to update isDeleted without admin privileges
     if (isDeleted !== undefined && req.user?.role !== 'ADMIN') {
@@ -94,6 +94,7 @@ router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReques
                 firstName,
                 lastName,
                 email,
+                profilePicture,
                 ...(isDeleted !== undefined && req.user?.role === 'ADMIN' ? { isDeleted } : {}),
             },
         });

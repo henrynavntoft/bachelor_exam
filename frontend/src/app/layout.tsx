@@ -6,6 +6,8 @@ import AuthProvider from "./components/AuthProvider";
 import { ThemeProvider } from "./components/ThemeProvider";
 import ClientOnly from "./components/ClientOnly";
 import Header from "./components/Header";
+import { Toaster } from "sonner";
+import Footer from "./components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +31,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <QueryProvider>
           <AuthProvider>
 
@@ -41,7 +43,11 @@ export default function RootLayout({
                 disableTransitionOnChange
               >
                 <Header />
-                {children}
+                <main className="p-6 flex-grow">
+                  {children}
+                </main>
+                <Footer />
+                <Toaster />
               </ThemeProvider>
             </ClientOnly>
 
