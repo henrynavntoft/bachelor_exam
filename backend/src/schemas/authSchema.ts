@@ -22,7 +22,6 @@ export const signupSchema = z
             ),
         confirmPassword: z.string(),
         role: z.enum(['GUEST', 'HOST'], { required_error: 'Role is required' }),
-        profilePicture: z.string().optional(),
     })
     .refine((data) => data.password === data.confirmPassword, {
         message: 'Passwords do not match',

@@ -129,7 +129,7 @@ router.post('/signup', async (req: Request, res, next) => {
         return next(err as Error);
     }
 
-    const { firstName, lastName, email, password, role, profilePicture } = parsed;
+    const { firstName, lastName, email, password, role } = parsed;
     try {
         const exists = await prisma.user.findUnique({ where: { email } });
         if (exists) {
@@ -139,7 +139,7 @@ router.post('/signup', async (req: Request, res, next) => {
 
         const hashed = await bcrypt.hash(password, 14);
         const user = await prisma.user.create({
-            data: { firstName, lastName, email, hashedPassword: hashed, role, profilePicture },
+            data: { firstName, lastName, email, hashedPassword: hashed, role },
         });
 
         res.status(201).json({ user });

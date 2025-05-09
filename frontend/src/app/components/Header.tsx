@@ -20,14 +20,10 @@ import { CircleUserRound, Menu } from 'lucide-react';
 export default function Header() {
     const { user, logout } = useAuth();
 
-
     return (
-        // REMOVED: fixed top-0 left-0 right-0 z-50
-        // ADDED: w-full px-6 py-4 bg-background flex justify-between items-center
-        // (Re-arranged existing classes and removed the fixed ones)
         <header className="w-full px-6 py-4 bg-background flex justify-between items-center">
             <Link href="/" className="flex-shrink-0">
-                <Image src="/logo.png" alt="Logo" width={75} height={75} className="hover:opacity-90 transition-opacity" />
+                <Image src="/logo.svg" alt="Logo" width={75} height={75} className="hover:opacity-90 transition-opacity" />
             </Link>
 
             <div className="flex items-center gap-4">

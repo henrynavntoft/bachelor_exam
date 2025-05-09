@@ -34,7 +34,6 @@ const signupSchema = z.object({
         .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character (e.g., !@#$%^&*)"),
     confirmPassword: z.string(),
     role: z.enum(['GUEST', 'HOST'], { required_error: "Please select a role" }),
-    profilePicture: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal('')),
 }).refine(data => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"], // Show error on confirmPassword field
@@ -56,18 +55,17 @@ export default function SignupPage() {
             password: '',
             confirmPassword: '',
             role: "GUEST",
-            profilePicture: '',
         },
     });
 
-    const signupMutation = useMutation<void, Error, SignupFormValues>({ // Explicitly type mutation
+    const signupMutation = useMutation<void, Error, SignupFormValues>({
         mutationFn: async (data) => {
-            // Remove confirmPassword before sending to backend if not needed
-            const { confirmPassword, ...sendData } = data;
             await axiosInstance.post(
                 routes.auth.signup,
-                sendData,
-                { withCredentials: true }
+                data,
+                {
+                    withCredentials: true
+                }
             );
         },
         onSuccess: () => {
@@ -91,7 +89,7 @@ export default function SignupPage() {
     };
 
     const handleInvalidSubmit = (errors: FieldErrors<SignupFormValues>) => {
-        const fieldOrder: (keyof SignupFormValues)[] = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'role', 'profilePicture'];
+        const fieldOrder: (keyof SignupFormValues)[] = ['firstName', 'lastName', 'email', 'password', 'confirmPassword', 'role'];
         for (const fieldName of fieldOrder) {
             if (errors[fieldName]) {
                 form.setFocus(fieldName);
@@ -231,19 +229,7 @@ export default function SignupPage() {
                         )}
                     />
 
-                    <FormField
-                        control={form.control}
-                        name="profilePicture"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Profile Picture URL (Optional)</FormLabel>
-                                <FormControl>
-                                    <Input type="url" placeholder="https://example.com/image.png" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+
 
                     <Button type="submit" className="w-full mt-2" disabled={signupMutation.isPending}>
                         {signupMutation.isPending ? (

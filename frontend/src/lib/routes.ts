@@ -21,9 +21,11 @@ export const routes = {
         one: (id: string) => `${API_BASE}/users/${id}`,
         delete: (id: string) => `${API_BASE}/users/${id}`,
         update: (id: string) => `${API_BASE}/users/${id}`,
+        updateProfile: (id: string) => `${API_BASE}/users/${id}`,
     },
     upload: {
         upload: (id: string) => `${API_BASE}/upload/${id}`,
         delete: (id: string) => `${API_BASE}/upload/${id}`,
+        profile: (id: string) => `${API_BASE}/upload/profile/${id}`,
     },
 };

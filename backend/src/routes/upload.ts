@@ -103,4 +103,43 @@ router.delete(
     }
 );
 
+// POST: Upload profile picture
+router.post(
+    '/profile/:id',
+    authorize(['SELF']),
+    (req: AuthenticatedRequest, res: Response) => {
+        console.log('Profile upload request received:', {
+            headers: req.headers,
+            user: req.user,
+            file: req.file
+        });
+
+        upload.single('image')(req, res, (err: unknown) => {
+            if (err) {
+                console.error('Profile upload error:', err);
+                if (err instanceof MulterError) {
+                    console.error('Multer upload error:', err.message);
+                    res.status(400).json({ error: `Upload failed: ${err.message}` });
+                } else if (err instanceof Error) {
+                    console.error('Unknown upload error:', err.message);
+                    res.status(400).json({ error: `Upload failed: ${err.message}` });
+                } else {
+                    console.error('Upload error:', err);
+                    res.status(400).json({ error: 'Upload failed' });
+                }
+                return;
+            }
+
+            const file = req.file as S3File | undefined;
+            if (!file || !file.location) {
+                console.error('No file or location in request');
+                res.status(400).json({ error: 'Upload failed: No file received' });
+                return;
+            }
+
+            res.status(200).json({ url: file.location });
+        });
+    }
+);
+
 export default router;

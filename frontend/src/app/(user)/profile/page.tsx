@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import EventCard from "@/app/components/Card";
+import { Loader2 } from "lucide-react";
 
 // Interfaces
 interface Event {
@@ -57,14 +58,36 @@ interface Event {
 const profileSchema = z.object({
     firstName: z.string().min(2, "First name is required"),
     lastName: z.string().min(2, "Last name is required"),
-    profilePicture: z.string().optional(),
+    // Accept File or string or undefined for profilePicture
+    profilePicture: z.union([
+        z.instanceof(File),
+        z.string(),
+        z.undefined(),
+    ]).optional(),
 });
 
 const eventSchema = z.object({
     title: z.string().min(1, 'Title is required'),
     description: z.string().min(1, 'Description is required'),
     date: z.string().min(1, 'Date is required'),
-    location: z.string().min(1, 'Location is required')
+    location: z.string().min(1, 'Location is required'),
+    images: z.array(z.string()).optional(),
+    newImages: z.array(z.instanceof(File))
+        .optional()
+        .refine(
+            (files) => !files || files.length <= 5,
+            "Maximum 5 images allowed"
+        )
+        .refine(
+            (files) => !files || files.every(file => file.size <= 3 * 1024 * 1024),
+            "Each image must be less than 3MB"
+        )
+        .refine(
+            (files) => !files || files.every(file =>
+                ['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+            ),
+            "Only JPEG, PNG, and WebP images are allowed"
+        ),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -119,6 +142,7 @@ export default function ProfilePage() {
             profilePicture: currentUser?.profilePicture || '',
         },
     });
+    const profilePictureValue = profileForm.watch("profilePicture");
 
     // Update form values when user data changes
     useEffect(() => {
@@ -175,6 +199,13 @@ export default function ProfilePage() {
     const handleFileChange = () => {
         const files = imageRef.current?.files;
         if (files) {
+            // Check file sizes
+            const oversizedFiles = Array.from(files).filter(file => file.size > 3 * 1024 * 1024);
+            if (oversizedFiles.length > 0) {
+                toast.error("Some files exceed 3MB limit. Please select smaller files.");
+                if (imageRef.current) imageRef.current.value = '';
+                return;
+            }
             setPreviewImages(Array.from(files).map(f => URL.createObjectURL(f)));
         }
     };
@@ -182,6 +213,13 @@ export default function ProfilePage() {
     const handleCreateFileChange = () => {
         const files = createImageRef.current?.files;
         if (files) {
+            // Check file sizes
+            const oversizedFiles = Array.from(files).filter(file => file.size > 3 * 1024 * 1024);
+            if (oversizedFiles.length > 0) {
+                toast.error("Some files exceed 3MB limit. Please select smaller files.");
+                if (createImageRef.current) createImageRef.current.value = '';
+                return;
+            }
             setCreatePreviewImages(Array.from(files).map(f => URL.createObjectURL(f)));
         }
     };
@@ -194,6 +232,17 @@ export default function ProfilePage() {
     // Submit handlers
     async function handleCreateSubmit(data: EventFormData) {
         try {
+            // Validate the form data with Zod
+            const result = eventSchema.safeParse(data);
+            if (!result.success) {
+                // Show validation errors
+                const errors = result.error.errors;
+                errors.forEach(error => {
+                    toast.error(error.message);
+                });
+                return;
+            }
+
             // 1) create the event
             const res = await axiosInstance.post(
                 routes.events.create,
@@ -209,9 +258,8 @@ export default function ProfilePage() {
 
             // 2) upload selected files
             let uploadedUrls: string[] = [];
-            const files = createImageRef.current?.files;
-            if (files && files.length) {
-                const ups = Array.from(files).map(async file => {
+            if (data.newImages && data.newImages.length > 0) {
+                const ups = data.newImages.map(async file => {
                     const fd = new FormData();
                     fd.append('image', file);
                     const up = await axiosInstance.post(
@@ -241,8 +289,10 @@ export default function ProfilePage() {
             setCreatePreviewImages([]);
             if (createImageRef.current) createImageRef.current.value = '';
             setIsCreating(false);
+            toast.success("Event created successfully");
         } catch (err) {
             console.error('Create event failed', err);
+            toast.error("Failed to create event");
         }
     }
 
@@ -250,11 +300,30 @@ export default function ProfilePage() {
         if (!selectedEventId) return;
 
         try {
-            // upload new files
+            // Validate the form data with Zod
+            const result = eventSchema.safeParse(data);
+            if (!result.success) {
+                // Show validation errors
+                const errors = result.error.errors;
+                errors.forEach(error => {
+                    toast.error(error.message);
+                });
+                return;
+            }
+
+            // Get current event to preserve existing images
+            const currentEvent = events.find(ev => ev.id === selectedEventId);
+            if (!currentEvent) {
+                throw new Error('Event not found');
+            }
+
+            // Filter out images marked for deletion
+            const remainingImages = currentEvent.images.filter(img => !imagesToDelete.includes(img));
+
+            // Upload new files if any
             let uploadedUrls: string[] = [];
-            const files = imageRef.current?.files;
-            if (files && files.length) {
-                const ups = Array.from(files).map(async file => {
+            if (data.newImages && data.newImages.length > 0) {
+                const ups = data.newImages.map(async file => {
                     const fd = new FormData();
                     fd.append('image', file);
                     const up = await axiosInstance.post(
@@ -267,6 +336,9 @@ export default function ProfilePage() {
                 uploadedUrls = await Promise.all(ups);
             }
 
+            // Combine remaining and new images
+            const allImages = [...remainingImages, ...uploadedUrls];
+
             // send update
             await axiosInstance.put(
                 routes.events.update(selectedEventId),
@@ -275,18 +347,20 @@ export default function ProfilePage() {
                     description: data.description,
                     date: new Date(data.date),
                     location: data.location,
-                    images: uploadedUrls,
+                    images: allImages,
                 },
                 { withCredentials: true }
             );
 
             // delete removed images
-            await Promise.all(
-                imagesToDelete.map(url => {
-                    const key = new URL(url).pathname.replace(/^\/?/, '');
-                    return axiosInstance.delete(routes.upload.delete(selectedEventId), { data: { key } });
-                })
-            );
+            if (imagesToDelete.length > 0) {
+                await Promise.all(
+                    imagesToDelete.map(url => {
+                        const key = new URL(url).pathname.replace(/^\/?/, '');
+                        return axiosInstance.delete(routes.upload.delete(selectedEventId), { data: { key } });
+                    })
+                );
+            }
 
             // refresh
             await queryClient.invalidateQueries({ queryKey: ['host-events'] });
@@ -296,22 +370,41 @@ export default function ProfilePage() {
             editEventForm.reset();
             setImagesToDelete([]);
             setPreviewImages([]);
+            if (imageRef.current) imageRef.current.value = '';
+            toast.success("Event updated successfully");
         } catch (err) {
             console.error('Edit event failed', err);
+            toast.error("Failed to update event");
         }
     }
 
     async function handleProfileSubmit(data: ProfileFormData) {
         try {
+            let profilePictureUrl = data.profilePicture;
+            // If profilePicture is a File, upload it and get the URL
+            if (data.profilePicture instanceof File) {
+                const fd = new FormData();
+                fd.append('image', data.profilePicture);
+                const uploadUrl = routes.upload.profile(currentUser.id);
+                console.log('Uploading to:', uploadUrl);
+                const res = await axiosInstance.post(
+                    uploadUrl,
+                    fd,
+                    { headers: { 'Content-Type': 'multipart/form-data' } }
+                );
+                profilePictureUrl = res.data.url || res.data.location;
+            }
+
             await axiosInstance.put(
                 routes.users.update(currentUser.id),
-                { ...data, email: currentUser.email },
+                { ...data, profilePicture: profilePictureUrl, email: currentUser.email },
                 { withCredentials: true }
             );
             // Update the user context with new data
             if (user) {
                 user.firstName = data.firstName;
                 user.lastName = data.lastName;
+                user.profilePicture = profilePictureUrl as string;
             }
             setIsEditingProfile(false);
             toast.success("Profile updated successfully");
@@ -339,14 +432,13 @@ export default function ProfilePage() {
     }
 
     return isHost ? (
-        <article className="p-6">
-            <h1 className="text-2xl font-bold mb-4">Host Profile</h1>
-            <h2 className="text-xl mb-2">Your Events:</h2>
+        <article className="">
+            <h1 className="text-2xl font-bold mb-4 text-center">Host Profile</h1>
 
             {/* User profile info */}
-            <div className="mb-6 p-4 bg-gray-50 rounded">
-                <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-medium mb-2">Your Profile</h3>
+            <div className="mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Your Profile</h3>
                     {isEditingProfile ? (
                         <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(false)}>
                             Cancel
@@ -361,7 +453,7 @@ export default function ProfilePage() {
                     <Form {...profileForm}>
                         <form
                             onSubmit={profileForm.handleSubmit(handleProfileSubmit)}
-                            className="flex flex-col gap-2"
+                            className="flex flex-col gap-4"
                         >
                             <FormField
                                 control={profileForm.control}
@@ -370,7 +462,7 @@ export default function ProfilePage() {
                                     <FormItem>
                                         <FormLabel>First Name</FormLabel>
                                         <FormControl>
-                                            <Input {...field} />
+                                            <Input placeholder="Enter your first name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -383,20 +475,66 @@ export default function ProfilePage() {
                                     <FormItem>
                                         <FormLabel>Last Name</FormLabel>
                                         <FormControl>
-                                            <Input {...field} />
+                                            <Input placeholder="Enter your last name" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-                            <Button type="submit">Save Profile</Button>
+                            <FormField
+                                control={profileForm.control}
+                                name="profilePicture"
+                                render={({ field: { onChange, onBlur, name, ref } }) => (
+                                    <FormItem>
+                                        <FormLabel>Profile Picture</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.webp"
+                                                onBlur={onBlur}
+                                                name={name}
+                                                ref={ref}
+                                                onChange={(e) => onChange(e.target.files?.[0])}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            {/* Profile picture preview */}
+                            {profilePictureValue instanceof File && (
+                                <div className="mb-2">
+                                    <Label>Preview</Label>
+                                    <Image
+                                        src={URL.createObjectURL(profilePictureValue)}
+                                        alt="Profile Preview"
+                                        width={100}
+                                        height={100}
+                                        className="rounded border"
+                                    />
+                                </div>
+                            )}
+                            <Button
+                                type="submit"
+                                className="w-full mt-2"
+                                disabled={profileForm.formState.isSubmitting}
+                            >
+                                {profileForm.formState.isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Profile'
+                                )}
+                            </Button>
                         </form>
                     </Form>
                 ) : (
-                    <>
+                    <div className="space-y-2">
                         <p><strong>Name:</strong> {currentUser.firstName} {currentUser.lastName}</p>
                         <p><strong>Email:</strong> {currentUser.email}</p>
-                    </>
+                    </div>
                 )}
             </div>
 
@@ -473,12 +611,48 @@ export default function ProfilePage() {
                                     <Image key={i} src={src} alt="preview" width={80} height={80} className="rounded opacity-50" />
                                 ))}
                             </div>
-                            <Label>Images</Label>
-                            <Input
-                                type="file"
-                                multiple
-                                ref={createImageRef}
-                                onChange={handleCreateFileChange}
+                            <FormField
+                                control={createEventForm.control}
+                                name="newImages"
+                                render={({ field: { onChange, ...field } }) => (
+                                    <FormItem>
+                                        <FormLabel>Images</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="file"
+                                                multiple
+                                                accept=".jpg,.jpeg,.png,.webp"
+                                                onChange={(e) => {
+                                                    const files = e.target.files;
+                                                    if (files) {
+                                                        const fileArray = Array.from(files);
+                                                        // Validate file count
+                                                        if (fileArray.length > 5) {
+                                                            toast.error("Maximum 5 images allowed");
+                                                            e.target.value = ''; // Clear the input
+                                                            return;
+                                                        }
+                                                        // Validate file types and sizes
+                                                        const invalidFiles = fileArray.filter(file =>
+                                                            !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+                                                            file.size > 3 * 1024 * 1024
+                                                        );
+                                                        if (invalidFiles.length > 0) {
+                                                            toast.error("Some files are invalid. Only JPEG, PNG, and WebP images under 3MB are allowed.");
+                                                            e.target.value = ''; // Clear the input
+                                                            return;
+                                                        }
+                                                        onChange(fileArray);
+                                                        handleCreateFileChange();
+                                                    }
+                                                }}
+                                                {...field}
+                                                value={undefined}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
                             />
 
                             <AlertDialogAction asChild>
@@ -611,12 +785,48 @@ export default function ProfilePage() {
                                                                 <Image key={i} src={src} alt="preview" width={80} height={80} className="rounded opacity-50" />
                                                             ))}
                                                         </div>
-                                                        <Label>Add Images</Label>
-                                                        <Input
-                                                            type="file"
-                                                            multiple
-                                                            ref={imageRef}
-                                                            onChange={handleFileChange}
+                                                        <FormField
+                                                            control={editEventForm.control}
+                                                            name="newImages"
+                                                            render={({ field: { onChange, ...field } }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Add Images</FormLabel>
+                                                                    <FormControl>
+                                                                        <Input
+                                                                            type="file"
+                                                                            multiple
+                                                                            accept=".jpg,.jpeg,.png,.webp"
+                                                                            onChange={(e) => {
+                                                                                const files = e.target.files;
+                                                                                if (files) {
+                                                                                    const fileArray = Array.from(files);
+                                                                                    // Validate file count
+                                                                                    if (fileArray.length > 5) {
+                                                                                        toast.error("Maximum 5 images allowed");
+                                                                                        e.target.value = ''; // Clear the input
+                                                                                        return;
+                                                                                    }
+                                                                                    // Validate file types and sizes
+                                                                                    const invalidFiles = fileArray.filter(file =>
+                                                                                        !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+                                                                                        file.size > 3 * 1024 * 1024
+                                                                                    );
+                                                                                    if (invalidFiles.length > 0) {
+                                                                                        toast.error("Some files are invalid. Only JPEG, PNG, and WebP images under 3MB are allowed.");
+                                                                                        e.target.value = ''; // Clear the input
+                                                                                        return;
+                                                                                    }
+                                                                                    onChange(fileArray);
+                                                                                    handleFileChange();
+                                                                                }
+                                                                            }}
+                                                                            {...field}
+                                                                            value={undefined}
+                                                                        />
+                                                                    </FormControl>
+                                                                    <FormMessage />
+                                                                </FormItem>
+                                                            )}
                                                         />
 
                                                         <AlertDialogAction asChild>
@@ -654,55 +864,111 @@ export default function ProfilePage() {
             </div>
         </article>
     ) : (
-        <article className="p-6">
-            <Form {...profileForm}>
-                <form className="flex flex-col gap-4" onSubmit={profileForm.handleSubmit(handleProfileSubmit)}>
-                    <FormField
-                        control={profileForm.control}
-                        name="firstName"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>First Name</FormLabel>
-                                <FormControl>
-                                    <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={profileForm.control}
-                        name="lastName"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Last Name</FormLabel>
-                                <FormControl>
-                                    <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={profileForm.control}
-                        name="profilePicture"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Profile Picture</FormLabel>
-                                <FormControl>
-                                    <Input {...field} />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
+        <article className="">
+            <h1 className="text-2xl font-bold mb-4 text-center">Guest Profile</h1>
 
-                    <Button type="submit">Save Profile</Button>
-                </form>
-            </Form>
+            {/* User profile info */}
+            <div className="mb-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-medium">Your Profile</h3>
+                    {isEditingProfile ? (
+                        <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(false)}>
+                            Cancel
+                        </Button>
+                    ) : (
+                        <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)}>
+                            Edit Profile
+                        </Button>
+                    )}
+                </div>
+                {isEditingProfile ? (
+                    <Form {...profileForm}>
+                        <form className="flex flex-col gap-4" onSubmit={profileForm.handleSubmit(handleProfileSubmit)}>
+                            <FormField
+                                control={profileForm.control}
+                                name="firstName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>First Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Enter your first name" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={profileForm.control}
+                                name="lastName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Last Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Enter your last name" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={profileForm.control}
+                                name="profilePicture"
+                                render={({ field: { onChange, onBlur, name, ref } }) => (
+                                    <FormItem>
+                                        <FormLabel>Profile Picture</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="file"
+                                                accept=".jpg,.jpeg,.png,.webp"
+                                                onBlur={onBlur}
+                                                name={name}
+                                                ref={ref}
+                                                onChange={(e) => onChange(e.target.files?.[0])}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            {/* Profile picture preview */}
+                            {profilePictureValue instanceof File && (
+                                <div className="mb-2">
+                                    <Label>Preview</Label>
+                                    <Image
+                                        src={URL.createObjectURL(profilePictureValue)}
+                                        alt="Profile Preview"
+                                        width={100}
+                                        height={100}
+                                        className="rounded border"
+                                    />
+                                </div>
+                            )}
+                            <Button
+                                type="submit"
+                                className="w-full mt-2"
+                                disabled={profileForm.formState.isSubmitting}
+                            >
+                                {profileForm.formState.isSubmitting ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Profile'
+                                )}
+                            </Button>
+                        </form>
+                    </Form>
+                ) : (
+                    <div className="space-y-2">
+                        <p><strong>Name:</strong> {currentUser.firstName} {currentUser.lastName}</p>
+                        <p><strong>Email:</strong> {currentUser.email}</p>
+                    </div>
+                )}
+            </div>
 
             <div className="pt-6">
-                <h2 className="text-xl font-semibold mb-2">Events You&apos;re Attending</h2>
+                <h2 className="text-xl font-semibold mb-4">Events You&apos;re Attending</h2>
                 {isLoadingEvents ? (
                     <div className="flex justify-center py-8">
                         <LoadingSpinner />
