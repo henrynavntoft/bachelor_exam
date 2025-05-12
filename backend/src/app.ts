@@ -15,6 +15,7 @@ import { loggingMiddleware } from './middleware/loggingMiddleware';
 dotenv.config({ path: './.env' });
 
 const app: Express = express();
+app.set('trust proxy', true);
 
 app.use(generalLimiter);
 app.use(securityMiddleware);
