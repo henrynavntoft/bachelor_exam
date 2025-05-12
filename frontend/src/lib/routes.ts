@@ -6,6 +6,8 @@ export const routes = {
         logout: `${API_BASE}/auth/logout`,
         me: `${API_BASE}/auth/me`,
         signup: `${API_BASE}/auth/signup`,
+        forgotPassword: `${API_BASE}/auth/forgot-password`,
+        resetPassword: `${API_BASE}/auth/reset-password`,
     },
     events: {
         all: `${API_BASE}/events`,

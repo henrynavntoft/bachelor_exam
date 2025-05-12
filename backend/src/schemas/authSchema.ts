@@ -28,3 +28,8 @@ export const signupSchema = z
         path: ['confirmPassword'],
     });
 export type SignupInput = z.infer<typeof signupSchema>;
+
+export const forgotPasswordSchema = z.object({
+    email: z.string().email("Invalid email address"),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;

@@ -2,9 +2,11 @@ import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
-import { loginSchema, signupSchema } from '../schemas/authSchema';
+import { forgotPasswordSchema, loginSchema, signupSchema } from '../schemas/authSchema';
 import { ZodError, ZodIssue } from 'zod';
 import { prisma } from '../config/prisma';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -143,6 +145,188 @@ router.post('/signup', async (req: Request, res, next) => {
         });
 
         res.status(201).json({ user });
+    } catch (err) {
+        next(err as Error);
+    }
+});
+
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Forgot Password
+router.post('/forgot-password', async (req: Request, res: Response, next: NextFunction) => {
+    let parsed;
+    try {
+        parsed = forgotPasswordSchema.parse(req.body);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors
+                .map((issue: ZodIssue) => issue.message)
+                .join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        return next(err as Error);
+    }
+
+    const { email } = parsed;
+
+    try {
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) {
+            res.json({ message: 'If an account exists with this email, you will receive password reset instructions.' });
+            return;
+        }
+
+        // Generate token
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+        // Store token
+        await prisma.passwordResetToken.create({
+            data: {
+                token,
+                userId: user.id,
+                expiresAt,
+            },
+        });
+
+        // Create email transporter
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        // Send reset email
+        const resetUrl = `${process.env.CORS_ORIGINS}/reset-password?token=${token}`;
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: user.email,
+            subject: 'Password Reset Request',
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        .email-container {
+                            max-width: 600px;
+                            margin: 0 auto;
+                            padding: 20px;
+                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+                            line-height: 1.6;
+                            color: #333;
+                        }
+                        .header {
+                            text-align: center;
+                            margin-bottom: 30px;
+                        }
+                        .content {
+                            background: #f9f9f9;
+                            padding: 30px;
+                            border-radius: 8px;
+                            margin-bottom: 20px;
+                        }
+                        .button {
+                            display: inline-block;
+                            padding: 12px 24px;
+                            background-color: #1A6258;
+                            color: white;
+                            text-decoration: none;
+                            border-radius: 6px;
+                            font-weight: 500;
+                            margin: 20px 0;
+                        }
+                        .button:hover {
+                            opacity: 0.9;
+                        }
+                        .footer {
+                            text-align: center;
+                            font-size: 14px;
+                            color: #666;
+                            margin-top: 30px;
+                        }
+                        .divider {
+                            height: 1px;
+                            background-color: #eaeaea;
+                            margin: 20px 0;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="email-container">
+                        <div class="header">
+                            <h1 style="color: #1A6258; margin: 0;">Password Reset Request</h1>
+                        </div>
+                        <div class="content">
+                            <p style="font-size: 14px; color: #666;">Hello,</p>
+                            <p style="font-size: 14px; color: #666;">We received a request to reset your password. To proceed with the password reset, click the button below:</p>
+                            
+                            <div style="text-align: center;">
+                                <a style="text-decoration: none; color: white;" href="${resetUrl}" class="button">Reset Password</a>
+                            </div>
+                            
+                            <div class="divider"></div>
+                            
+                            <p style="font-size: 14px; color: #666;">
+                                If you didn't request this password reset, you can safely ignore this email. The link will expire in 1 hour.
+                            </p>
+                        </div>
+                        <div class="footer">
+                            <p>This is an automated message, please do not reply to this email.</p>
+                            <p style="color: #1A6258;">© 2024 Meet & Greet | Culture Connect. All rights reserved.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `,
+        });
+
+        res.json({ message: 'If an account exists with this email, you will receive password reset instructions.' });
+    } catch (err) {
+        next(err as Error);
+    }
+});
+
+//////////////////////////////////////////////////////////////////////////////////
+// POST: Reset Password
+router.post('/reset-password', async (req: Request, res: Response, next: NextFunction) => {
+    const { token, password, confirmPassword } = req.body;
+
+    if (password !== confirmPassword) {
+        res.status(400).json({ error: 'Passwords do not match' });
+        return;
+    }
+
+    try {
+        const resetToken = await prisma.passwordResetToken.findUnique({
+            where: { token },
+            include: { user: true },
+        });
+
+        if (!resetToken) {
+            res.status(400).json({ error: 'Invalid or expired token' });
+            return;
+        }
+
+        if (resetToken.expiresAt < new Date()) {
+            await prisma.passwordResetToken.delete({ where: { token } });
+            res.status(400).json({ error: 'Token has expired' });
+            return;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 14);
+
+        await prisma.user.update({
+            where: { id: resetToken.userId },
+            data: { hashedPassword },
+        });
+
+        await prisma.passwordResetToken.delete({
+            where: { token },
+        });
+
+        res.json({ message: 'Password has been reset successfully' });
     } catch (err) {
         next(err as Error);
     }
