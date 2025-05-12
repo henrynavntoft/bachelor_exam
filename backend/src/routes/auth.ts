@@ -198,9 +198,11 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
             },
         });
 
-        // Send reset email
         const resetUrl = `${process.env.CORS_ORIGINS}/reset-password?token=${token}`;
-        await transporter.sendMail({
+
+        res.json({ message: 'If an account exists with this email, you will receive password reset instructions.' });
+
+        transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: user.email,
             subject: 'Password Reset Request',
@@ -280,9 +282,11 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
                 </body>
                 </html>
             `,
+        }).then(() => {
+            console.log(`✅ Password reset email sent to ${user.email}`);
+        }).catch((err) => {
+            console.error(`❌ Failed to send password reset email to ${user.email}:`, err);
         });
-
-        res.json({ message: 'If an account exists with this email, you will receive password reset instructions.' });
     } catch (err) {
         next(err as Error);
     }
