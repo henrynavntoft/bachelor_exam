@@ -1,9 +1,9 @@
 import { Router, Response } from 'express';
-import multer, { MulterError } from 'multer';
-import multerS3 from 'multer-s3';
+import multer from 'multer';
 import s3 from '../lib/s3';
-import { DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
+import sharp from 'sharp';
 
 
 const router = Router();
@@ -12,52 +12,59 @@ if (!process.env.LINODE_BUCKET_NAME) {
     throw new Error('LINODE_BUCKET_NAME is not defined');
 }
 
-interface S3File extends Express.Multer.File {
-    location: string;
-}
-
 const upload = multer({
-    storage: multerS3({
-        s3,
-        bucket: process.env.LINODE_BUCKET_NAME!,
-        acl: 'public-read',
-        key: (req, file, cb) => {
-            // Strip any path or directory structure and save at root of bucket
-            const fileName = file.originalname.split('/').pop() || file.originalname;
-            const uniqueName = `${Date.now()}-${fileName}`;
-            cb(null, uniqueName); // No folder prefix
-        },
-    }),
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 1024 * 1024 * 10, // 10MB
+    },
+    fileFilter: (req, file, cb) => {
+        // Accept only image files
+        if (file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only image files are allowed!'));
+        }
+    }
 });
 
 //////////////////////////////////////////////////////////////////////////////////
-// POST: Upload a single image
+// POST: Upload a single image (converted to WebP and square cropped)
 router.post(
     '/:id',
     authorize(['EVENT_OWNER']),
-    (req: AuthenticatedRequest, res: Response) => {
-        // Use multer explicitly to catch errors
-        upload.single('image')(req, res, (err: unknown) => {
-            if (err) {
-                if (err instanceof MulterError) {
-                    console.error('Multer upload error:', err.message);
-                } else if (err instanceof Error) {
-                    console.error('Unknown upload error:', err.message);
-                } else {
-                    console.error('Upload error:', err);
-                }
-                res.status(500).json({ error: 'Upload failed' });
-                return;
-            }
+    upload.single('image'),
+    async (req: AuthenticatedRequest, res: Response) => {
+        if (!req.file) {
+            res.status(400).json({ error: 'No file uploaded' });
+            return;
+        }
 
-            const file = req.file as S3File | undefined;
-            if (!file || !file.location) {
-                res.status(400).json({ error: 'Upload failed' });
-                return;
-            }
+        try {
+            const processedImage = await sharp(req.file.buffer)
+                .resize(800, 800, {
+                    fit: sharp.fit.cover,
+                })
+                .webp()
+                .toBuffer();
 
-            res.status(200).json({ url: file.location });
-        });
+            const uniqueName = `${Date.now()}-${req.file.originalname.split('/').pop()?.split('.')[0] || 'image'}.webp`;
+
+            const uploadCommand = new PutObjectCommand({
+                Bucket: process.env.LINODE_BUCKET_NAME!,
+                Key: uniqueName,
+                Body: processedImage,
+                ContentType: 'image/webp',
+                ACL: 'public-read',
+            });
+
+            await s3.send(uploadCommand);
+
+            const location = `${process.env.LINODE_OBJECT_STORAGE_ENDPOINT}/${process.env.LINODE_BUCKET_NAME}/${uniqueName}`;
+            res.status(200).json({ url: location });
+        } catch (err) {
+            console.error('Error processing or uploading file:', err);
+            res.status(500).json({ error: 'Upload failed' });
+        }
     }
 );
 
@@ -103,42 +110,43 @@ router.delete(
     }
 );
 
-// POST: Upload profile picture
+// POST: Upload profile picture (converted to WebP and square cropped)
 router.post(
     '/profile/:id',
     authorize(['SELF']),
-    (req: AuthenticatedRequest, res: Response) => {
-        console.log('Profile upload request received:', {
-            headers: req.headers,
-            user: req.user,
-            file: req.file
-        });
+    upload.single('image'),
+    async (req: AuthenticatedRequest, res: Response) => {
+        if (!req.file) {
+            res.status(400).json({ error: 'No file uploaded' });
+            return;
+        }
 
-        upload.single('image')(req, res, (err: unknown) => {
-            if (err) {
-                console.error('Profile upload error:', err);
-                if (err instanceof MulterError) {
-                    console.error('Multer upload error:', err.message);
-                    res.status(400).json({ error: `Upload failed: ${err.message}` });
-                } else if (err instanceof Error) {
-                    console.error('Unknown upload error:', err.message);
-                    res.status(400).json({ error: `Upload failed: ${err.message}` });
-                } else {
-                    console.error('Upload error:', err);
-                    res.status(400).json({ error: 'Upload failed' });
-                }
-                return;
-            }
+        try {
+            const processedImage = await sharp(req.file.buffer)
+                .resize(800, 800, {
+                    fit: sharp.fit.cover,
+                })
+                .webp()
+                .toBuffer();
 
-            const file = req.file as S3File | undefined;
-            if (!file || !file.location) {
-                console.error('No file or location in request');
-                res.status(400).json({ error: 'Upload failed: No file received' });
-                return;
-            }
+            const uniqueName = `profile-${req.params.id}-${Date.now()}.webp`;
 
-            res.status(200).json({ url: file.location });
-        });
+            const uploadCommand = new PutObjectCommand({
+                Bucket: process.env.LINODE_BUCKET_NAME!,
+                Key: uniqueName,
+                Body: processedImage,
+                ContentType: 'image/webp',
+                ACL: 'public-read',
+            });
+
+            await s3.send(uploadCommand);
+
+            const location = `${process.env.LINODE_OBJECT_STORAGE_ENDPOINT}/${process.env.LINODE_BUCKET_NAME}/${uniqueName}`;
+            res.status(200).json({ url: location });
+        } catch (err) {
+            console.error('Error processing or uploading profile file:', err);
+            res.status(500).json({ error: 'Upload failed' });
+        }
     }
 );
 

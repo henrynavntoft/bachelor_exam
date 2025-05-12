@@ -98,7 +98,7 @@ export default function EventPage() {
     }
 
     return (
-        <main className="min-h-screen bg-gray-50">
+        <main className="min-h-screen">
             <div className="max-w-7xl mx-auto px-4 py-8">
                 <Button
                     variant="ghost"
@@ -130,10 +130,9 @@ export default function EventPage() {
                             )}
                         </div>
 
-                        <div className="bg-white rounded-lg shadow-sm p-6">
-                            <h2 className="text-xl font-semibold mb-4">About this event</h2>
-                            <p className="text-gray-700 leading-relaxed">{event.description}</p>
-                        </div>
+
+                        <p className="text-gray-700 leading-relaxed">{event.description}</p>
+
                     </div>
 
                     {/* Images on the right */}
