@@ -6,7 +6,7 @@ import { forgotPasswordSchema, loginSchema, signupSchema } from '../schemas/auth
 import { ZodError, ZodIssue } from 'zod';
 import { prisma } from '../config/prisma';
 import crypto from 'crypto';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -189,21 +189,14 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
             },
         });
 
-        // Create email transporter
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+        const resend = new Resend(process.env.RESEND_API_KEY);
 
         const resetUrl = `${process.env.CORS_ORIGINS}/reset-password?token=${token}`;
 
         res.json({ message: 'If an account exists with this email, you will receive password reset instructions.' });
 
-        transporter.sendMail({
-            from: process.env.EMAIL_USER,
+        resend.emails.send({
+            from: process.env.RESEND_FROM_EMAIL!,
             to: user.email,
             subject: 'Password Reset Request',
             html: `
