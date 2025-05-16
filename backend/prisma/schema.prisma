@@ -34,6 +34,7 @@ model User {
   updatedAt       DateTime             @updatedAt
   isDeleted       Boolean              @default(false)
   resetTokens     PasswordResetToken[]
+  messages        Message[]
 }
 
 model PasswordResetToken {
@@ -58,6 +59,7 @@ model Event {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   isDeleted   Boolean    @default(false)
+  messages    Message[]
 }
 
 model Attendee {
@@ -67,4 +69,14 @@ model Attendee {
   user      User     @relation(fields: [userId], references: [id])
   event     Event    @relation(fields: [eventId], references: [id])
   createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id])
 }

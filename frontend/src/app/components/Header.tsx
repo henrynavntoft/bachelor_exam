@@ -11,14 +11,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CircleUserRound, Menu } from 'lucide-react';
-
-
-
-
+import { CircleUserRound, Menu, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
 
 export default function Header() {
     const { user, logout } = useAuth();
+    const { theme, setTheme } = useTheme();
 
     return (
         <header className="w-full px-6 py-4 bg-background flex justify-between items-center">
@@ -30,9 +28,7 @@ export default function Header() {
                 {user ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-
-
-                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border border-gray-200 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"> {/* Added focus states */}
+                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border border-gray-200 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <Menu strokeWidth={1} size={20} />
                                 {user.profilePicture ? (
                                     <Image
@@ -40,7 +36,7 @@ export default function Header() {
                                         alt="Profile Picture"
                                         width={30}
                                         height={30}
-                                        className="rounded-full aspect-square object-cover" // Added object-cover
+                                        className="rounded-full aspect-square object-cover"
                                     />
                                 ) : (
                                     <CircleUserRound strokeWidth={1} size={30} />
@@ -55,7 +51,24 @@ export default function Header() {
                                     {user.role === 'ADMIN' ? 'Dashboard' : 'Profile'}
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"> {/* Added focus styles */}
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuLabel className="text-xs text-gray-500">Theme</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
+                                <Sun className="h-4 w-4" />
+                                <span>Light</span>
+                                {theme === "light" && <span className="ml-auto text-brand">✓</span>}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2">
+                                <Moon className="h-4 w-4" />
+                                <span>Dark</span>
+                                {theme === "dark" && <span className="ml-auto text-brand">✓</span>}
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50">
                                 Logout
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -63,8 +76,7 @@ export default function Header() {
                 ) : (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-
-                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border border-gray-200 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"> {/* Added focus states */}
+                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border border-gray-200 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                                 <Menu strokeWidth={1} size={20} />
                                 <CircleUserRound strokeWidth={1} size={30} />
                             </button>
@@ -79,6 +91,20 @@ export default function Header() {
                                 <Link href="/signup" className="cursor-pointer">
                                     Sign up
                                 </Link>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuLabel className="text-xs text-gray-500">Theme</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
+                                <Sun className="h-4 w-4" />
+                                <span>Light</span>
+                                {theme === "light" && <span className="ml-auto text-brand">✓</span>}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2">
+                                <Moon className="h-4 w-4" />
+                                <span>Dark</span>
+                                {theme === "dark" && <span className="ml-auto text-brand">✓</span>}
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

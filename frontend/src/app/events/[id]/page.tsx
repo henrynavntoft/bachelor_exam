@@ -8,10 +8,12 @@ import axiosInstance from "@/lib/axios";
 import { routes } from "@/lib/routes";
 import LoadingSpinner from "@/app/components/LoadingSpinner";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import Chat from "@/app/components/Chat";
+import { useState } from "react";
 
 interface Event {
     id: string;
@@ -32,6 +34,7 @@ export default function EventPage() {
     const { isGuest, user } = useAuth();
     const queryClient = useQueryClient();
     const eventId = params.id as string;
+    const [chatLoading, setChatLoading] = useState(false);
 
     const { data: event, isLoading } = useQuery<Event>({
         queryKey: ["event", eventId],
@@ -61,6 +64,7 @@ export default function EventPage() {
                 // Attend event
                 await axiosInstance.post(routes.events.attend(eventId), {}, { withCredentials: true });
                 toast.success("Successfully RSVPed to event");
+                setChatLoading(true);
             }
 
             // Invalidate queries to refresh the data
@@ -93,35 +97,89 @@ export default function EventPage() {
         return (
             <main className="p-4">
                 <h1 className="text-2xl font-bold">Event not found</h1>
+                <Button
+                    variant="ghost"
+                    className="mt-4"
+                    onClick={() => router.back()}
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Go back
+                </Button>
             </main>
         );
     }
 
     return (
-        <main className="min-h-screen">
-            <div className="max-w-7xl mx-auto px-4 py-8">
+        <main className="flex flex-col gap-4">
+            <div className="">
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     className="mb-6"
                     onClick={() => router.back()}
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back
+                    Back to events
                 </Button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Content on the left */}
-                    <div className="space-y-6">
-                        <div>
-                            <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
-                            <div className="flex items-center gap-4 text-gray-600 mb-6">
-                                <p>{format(new Date(event.date), "MMMM dd, yyyy")}</p>
-                                <span>•</span>
-                                <p>{event.location}</p>
+                <div className="space-y-4">
+                    <div className="">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                            <h2 className="text-xl font-semibold mb-4">Event Gallery</h2>
+                            <div className="grid grid-cols-2 gap-4">
+                                {event.images && event.images.length > 0 ? (
+                                    event.images.map((image, index) => (
+                                        <div key={index} className="rounded-lg overflow-hidden">
+                                            <Image
+                                                src={image}
+                                                alt={`${event.title} - Image ${index + 1}`}
+                                                width={300}
+                                                height={300}
+                                                className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
+                                            />
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                                        No images available for this event
+                                    </p>
+                                )}
                             </div>
+                        </div>
+                    </div>
+
+                    <div className="">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                            <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
+
+                            {/* Event metadata with icons */}
+                            <div className="flex flex-col space-y-3 text-gray-600 dark:text-gray-300 mb-6">
+                                <div className="flex items-center">
+                                    <Calendar className="h-5 w-5 mr-2 text-gray-500" />
+                                    <p>{format(new Date(event.date), "EEEE, MMMM dd, yyyy 'at' h:mm a")}</p>
+                                </div>
+                                <div className="flex items-center">
+                                    <MapPin className="h-5 w-5 mr-2 text-gray-500" />
+                                    <p>{event.location}</p>
+                                </div>
+                                <div className="flex items-center">
+                                    <Users className="h-5 w-5 mr-2 text-gray-500" />
+                                    <p>{event.attendees?.length || 0} attending</p>
+                                </div>
+                            </div>
+
+                            {/* Description */}
+                            <div className="prose dark:prose-invert max-w-none mb-6">
+                                <h3 className="text-xl font-semibold mb-2">About this event</h3>
+                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                                    {event.description}
+                                </p>
+                            </div>
+
+                            {/* Attendance button - only show for guests */}
                             {isGuest && (
                                 <Button
-                                    className="w-full sm:w-auto"
+                                    className="w-full sm:w-auto mt-4"
+                                    size="lg"
                                     variant={isUserAttending ? "destructive" : "default"}
                                     onClick={handleAttend}
                                 >
@@ -129,25 +187,23 @@ export default function EventPage() {
                                 </Button>
                             )}
                         </div>
-
-
-                        <p className="text-gray-700 leading-relaxed">{event.description}</p>
-
                     </div>
 
-                    {/* Images on the right */}
                     <div className="space-y-4">
-                        {event.images.map((image, index) => (
-                            <div key={image}>
-                                <Image
-                                    src={image}
-                                    alt={`${event.title} - Image ${index + 1}`}
-                                    width={500}
-                                    height={500}
-                                />
+                        {/* Chat section - Only show for attendees */}
+                        {isUserAttending && (
+                            <div className="">
+                                {chatLoading ? (
+                                    <div className="flex justify-center py-8">
+                                        <LoadingSpinner />
+                                    </div>
+                                ) : (
+                                    <Chat eventId={eventId} />
+                                )}
                             </div>
-                        ))}
+                        )}
                     </div>
+
                 </div>
             </div>
         </main>
