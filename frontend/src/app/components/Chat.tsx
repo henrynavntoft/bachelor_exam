@@ -66,6 +66,11 @@ export default function EventChat({ eventId }: ChatProps) {
                             const isCurrentUser = msg.user.id === user?.id ||
                                 msg.user.email === user?.email;
 
+                            // Determine the profile image URL - safely handling optional fields
+                            const profileImageUrl = isCurrentUser
+                                ? (user?.profilePicture || null)
+                                : (msg.user.image || null);
+
                             return (
                                 <div
                                     key={msg.id}
@@ -79,10 +84,10 @@ export default function EventChat({ eventId }: ChatProps) {
                                     >
                                         <div className="flex items-center gap-2 mb-1">
                                             <div className="h-6 w-6 rounded-full bg-gray-300 dark:bg-gray-600 overflow-hidden flex items-center justify-center">
-                                                {isCurrentUser && user?.profilePicture ? (
+                                                {profileImageUrl ? (
                                                     <Image
-                                                        src={user.profilePicture}
-                                                        alt="Your profile"
+                                                        src={profileImageUrl}
+                                                        alt={`${msg.user.name || 'User'}'s profile`}
                                                         width={25}
                                                         height={25}
                                                         className="h-full w-full object-cover"

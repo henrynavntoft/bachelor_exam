@@ -9,6 +9,7 @@ interface Message {
         id: string;
         name: string;
         email: string;
+        image?: string | null;
     };
 }
 
@@ -26,9 +27,18 @@ export function useEventChat(eventId: string) {
         setLoading(true);
         setError(null);
 
-        // Simplest connection - the URL is automatically deduced from window.location
-        // This works because nginx serves both frontend and socket.io endpoints from same domain
-        const socket = io();
+        // Configure Socket.IO client with production-ready settings
+        const socket = io({
+            // Path is automatically handled by Nginx
+            transports: ['websocket', 'polling'],  // Try WebSocket first, fall back to polling
+            reconnection: true,                   // Enable reconnection
+            reconnectionAttempts: 5,              // Number of reconnection attempts
+            reconnectionDelay: 1000,              // Starting delay between reconnection attempts
+            reconnectionDelayMax: 5000,           // Maximum delay between attempts
+            timeout: 20000,                       // Connection timeout
+            autoConnect: true,                    // Connect automatically
+            withCredentials: true,                // Send cookies with the request
+        });
 
         socketRef.current = socket;
 
@@ -36,6 +46,7 @@ export function useEventChat(eventId: string) {
         socket.on('connect', () => {
             console.log('Socket connected');
             setIsConnected(true);
+            setError(null); // Clear any previous connection errors
             // Join the event chat room
             socket.emit('join-event-chat', eventId);
         });
@@ -51,6 +62,23 @@ export function useEventChat(eventId: string) {
             console.error('Socket connection error:', err.message);
             setError(`Connection error: ${err.message}`);
             setLoading(false);
+        });
+
+        // Handle reconnection attempts
+        socket.io.on('reconnect_attempt', (attemptNumber) => {
+            console.log(`Socket reconnection attempt #${attemptNumber}`);
+        });
+
+        // Handle successful reconnection
+        socket.io.on('reconnect', () => {
+            console.log('Socket reconnected successfully');
+            socket.emit('join-event-chat', eventId); // Rejoin the event chat room after reconnection
+        });
+
+        // Handle maximum reconnection attempts reached
+        socket.io.on('reconnect_failed', () => {
+            console.error('Socket reconnection failed after maximum attempts');
+            setError('Connection lost. Please refresh the page to reconnect.');
         });
 
         // Handle initial load of recent messages

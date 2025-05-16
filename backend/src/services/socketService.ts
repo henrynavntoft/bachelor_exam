@@ -144,6 +144,7 @@ export class SocketService {
                             id: msg.user.id,
                             name: `${msg.user.firstName} ${msg.user.lastName}`.trim(),
                             email: msg.user.email,
+                            image: msg.user.profilePicture || null
                         }
                     }));
 
@@ -205,6 +206,7 @@ export class SocketService {
                             id: savedMessage.user.id,
                             name: `${savedMessage.user.firstName} ${savedMessage.user.lastName}`.trim(),
                             email: savedMessage.user.email,
+                            image: savedMessage.user.profilePicture || null
                         }
                     };
 
