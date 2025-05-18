@@ -112,23 +112,15 @@ export default function EventPage() {
     return (
         <main className="flex flex-col gap-4">
             <div className="">
-                <Button
-                    variant="outline"
-                    className="mb-6"
-                    onClick={() => router.back()}
-                >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to events
-                </Button>
 
-                <div className="space-y-4">
+                <article className="space-y-4">
                     <div className="">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+                        <div className="border p-6">
                             <h2 className="text-xl font-semibold mb-4">Event Gallery</h2>
                             <div className="grid grid-cols-2 gap-4">
                                 {event.images && event.images.length > 0 ? (
                                     event.images.map((image, index) => (
-                                        <div key={index} className="rounded-lg overflow-hidden">
+                                        <div key={index} className="overflow-hidden">
                                             <Image
                                                 src={image}
                                                 alt={`${event.title} - Image ${index + 1}`}
@@ -139,7 +131,7 @@ export default function EventPage() {
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                                    <p className="text-center py-8">
                                         No images available for this event
                                     </p>
                                 )}
@@ -147,64 +139,65 @@ export default function EventPage() {
                         </div>
                     </div>
 
-                    <div className="">
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-                            <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
+                    <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="">
+                            <div className="border p-6">
+                                <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
 
-                            {/* Event metadata with icons */}
-                            <div className="flex flex-col space-y-3 text-gray-600 dark:text-gray-300 mb-6">
-                                <div className="flex items-center">
-                                    <Calendar className="h-5 w-5 mr-2 text-gray-500" />
-                                    <p>{format(new Date(event.date), "EEEE, MMMM dd, yyyy 'at' h:mm a")}</p>
-                                </div>
-                                <div className="flex items-center">
-                                    <MapPin className="h-5 w-5 mr-2 text-gray-500" />
-                                    <p>{event.location}</p>
-                                </div>
-                                <div className="flex items-center">
-                                    <Users className="h-5 w-5 mr-2 text-gray-500" />
-                                    <p>{event.attendees?.length || 0} attending</p>
-                                </div>
-                            </div>
-
-                            {/* Description */}
-                            <div className="prose dark:prose-invert max-w-none mb-6">
-                                <h3 className="text-xl font-semibold mb-2">About this event</h3>
-                                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                                    {event.description}
-                                </p>
-                            </div>
-
-                            {/* Attendance button - only show for guests */}
-                            {isGuest && (
-                                <Button
-                                    className="w-full sm:w-auto mt-4"
-                                    size="lg"
-                                    variant={isUserAttending ? "destructive" : "default"}
-                                    onClick={handleAttend}
-                                >
-                                    {isUserAttending ? "Cancel Attendance" : "Attend Event"}
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        {/* Chat section - Only show for attendees */}
-                        {isUserAttending && (
-                            <div className="">
-                                {chatLoading ? (
-                                    <div className="flex justify-center py-8">
-                                        <LoadingSpinner />
+                                {/* Event metadata with icons */}
+                                <div className="flex flex-col space-y-3 mb-6">
+                                    <div className="flex items-center">
+                                        <Calendar className="h-5 w-5 mr-2" />
+                                        <p>{format(new Date(event.date), "EEEE, MMMM dd, yyyy 'at' h:mm a")}</p>
                                     </div>
-                                ) : (
-                                    <Chat eventId={eventId} />
+                                    <div className="flex items-center">
+                                        <MapPin className="h-5 w-5 mr-2" />
+                                        <p>{event.location}</p>
+                                    </div>
+                                    <div className="flex items-center">
+                                        <Users className="h-5 w-5 mr-2" />
+                                        <p>{event.attendees?.length || 0} attending</p>
+                                    </div>
+                                </div>
+
+                                {/* Description */}
+                                <div className="prose max-w-none mb-6">
+                                    <h3 className="text-xl font-semibold mb-2">About this event</h3>
+                                    <p className="leading-relaxed whitespace-pre-line">
+                                        {event.description}
+                                    </p>
+                                </div>
+
+
+                                {isGuest && (
+                                    <Button
+                                        className="w-full sm:w-auto mt-4"
+                                        size="lg"
+                                        variant={isUserAttending ? "destructive" : "default"}
+                                        onClick={handleAttend}
+                                    >
+                                        {isUserAttending ? "Cancel Attendance" : "Attend Event"}
+                                    </Button>
                                 )}
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                </div>
+                        <div className="space-y-4">
+                            {/* Chat section - Only show for attendees */}
+                            {isUserAttending && (
+                                <div className="">
+                                    {chatLoading ? (
+                                        <div className="flex justify-center py-8">
+                                            <LoadingSpinner />
+                                        </div>
+                                    ) : (
+                                        <Chat eventId={eventId} />
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                </article>
             </div>
         </main>
     );

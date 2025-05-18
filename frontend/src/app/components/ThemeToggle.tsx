@@ -18,13 +18,13 @@ export function ThemeToggle() {
     return (
         <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="relative inline-flex h-9 w-16 items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            className="relative inline-flex h-9 w-16 items-center justify-center border transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
             aria-label="Toggle theme"
         >
             <span className="sr-only">Toggle theme</span>
             <span
                 className={`
-          absolute left-1 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-white transition-transform duration-300 ease-in-out
+          absolute left-1 flex h-7 w-7 items-center justify-center bg-brand transition-transform duration-300 ease-in-out
           ${theme === "dark" ? "translate-x-7" : "translate-x-0"}
         `}
             >
@@ -34,10 +34,10 @@ export function ThemeToggle() {
                     <Sun className="h-4 w-4" />
                 )}
             </span>
-            <span className={`absolute right-2 text-xs font-medium ${theme === "dark" ? "text-white" : "text-gray-400"}`}>
+            <span className="absolute right-2 text-xs font-medium">
                 {theme === "dark" ? "" : ""}
             </span>
-            <span className={`absolute left-2 text-xs font-medium ${theme === "dark" ? "text-gray-400" : "text-white"}`}>
+            <span className="absolute left-2 text-xs font-medium">
                 {theme === "dark" ? "" : ""}
             </span>
         </button>

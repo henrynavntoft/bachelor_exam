@@ -93,7 +93,7 @@ export default function Card({ event }: CardProps) {
 
     return (
         <UICard
-            className="cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            className="cursor-pointer border hover:border-input transition-colors"
             onClick={handleClick}
         >
             <CardContent className="p-4">
@@ -103,13 +103,13 @@ export default function Card({ event }: CardProps) {
                             src={event.images[0]}
                             alt={event.title}
                             fill
-                            className="object-cover rounded-md"
+                            className="object-cover"
                         />
                     </div>
                 )}
                 <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-                <p className="text-gray-600 mb-2 line-clamp-2">{event.description}</p>
-                <div className="text-sm text-gray-500 mb-4">
+                <p className="mb-2 line-clamp-2">{event.description}</p>
+                <div className="text-sm mb-4">
                     <p>{format(new Date(event.date), 'MMM dd, yyyy')}</p>
                     <p>{event.location}</p>
                 </div>

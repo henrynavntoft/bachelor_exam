@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { User } from 'lucide-react';
 import Image from 'next/image';
+import { format } from 'date-fns';
 
 interface ChatProps {
     eventId: string;
@@ -17,14 +18,14 @@ export default function EventChat({ eventId }: ChatProps) {
     const [text, setText] = useState('');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll to bottom when new messages arrive
+    // Auto-scroll to top when new messages arrive (since newest messages are at top)
     useEffect(() => {
         if (scrollAreaRef.current && messages.length > 0) {
             const scrollContainer = scrollAreaRef.current;
             setTimeout(() => {
                 const scrollContent = scrollContainer.querySelector('[data-radix-scroll-area-viewport]');
                 if (scrollContent) {
-                    scrollContent.scrollTop = scrollContent.scrollHeight;
+                    scrollContent.scrollTop = 0;
                 }
             }, 100);
         }
@@ -40,29 +41,30 @@ export default function EventChat({ eventId }: ChatProps) {
     }
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+        <div className="border p-6">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Event Chat</h3>
-                <div className={`text-xs px-2 py-1 rounded-full ${isConnected ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
+                <div className={`text-xs px-2 py-1 ${isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
                     {isConnected ? 'Connected' : 'Disconnected'}
                 </div>
             </div>
 
             {loading ? (
-                <div className="py-8 text-center text-gray-500 dark:text-gray-400">Loading messages...</div>
+                <div className="py-8 text-center">Loading messages...</div>
             ) : error ? (
                 <div className="py-8 text-center text-red-500">{error}</div>
             ) : (
                 <ScrollArea
                     ref={scrollAreaRef}
-                    className="max-h-96 overflow-y-auto border dark:border-gray-700 p-4 rounded-lg bg-gray-50 dark:bg-gray-900"
+                    className="max-h-96 overflow-y-auto border p-4"
                     scrollHideDelay={0}
                 >
                     {messages.length === 0 ? (
-                        <div className="py-8 text-center text-gray-500 dark:text-gray-400">No messages yet. Start the conversation!</div>
+                        <div className="py-8 text-center">No messages yet. Start the conversation!</div>
                     ) : (
-                        messages.map((msg) => {
+                        // Reverse the messages array to show latest messages first
+                        [...messages].reverse().map((msg) => {
                             const isCurrentUser = msg.user.id === user?.id ||
                                 msg.user.email === user?.email;
 
@@ -76,14 +78,14 @@ export default function EventChat({ eventId }: ChatProps) {
                                     key={msg.id}
                                     className={`mb-4 ${isCurrentUser ? 'text-right' : 'text-left'}`}
                                 >
-                                    <div className={`inline-block max-w-3/4 px-3 py-2 rounded-lg 
+                                    <div className={`inline-block max-w-3/4 px-3 py-2 
                                         ${isCurrentUser
-                                            ? 'bg-brand text-primary-foreground'
-                                            : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
+                                            ? 'bg-brand'
+                                            : 'bg-muted'
                                         }`}
                                     >
                                         <div className="flex items-center gap-2 mb-1">
-                                            <div className="h-6 w-6 rounded-full bg-gray-300 dark:bg-gray-600 overflow-hidden flex items-center justify-center">
+                                            <div className="h-6 w-6 overflow-hidden flex items-center justify-center">
                                                 {profileImageUrl ? (
                                                     <Image
                                                         src={profileImageUrl}
@@ -93,7 +95,7 @@ export default function EventChat({ eventId }: ChatProps) {
                                                         className="h-full w-full object-cover"
                                                     />
                                                 ) : (
-                                                    <User className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                                                    <User className="h-3 w-3" />
                                                 )}
                                             </div>
                                             <span className="text-xs font-semibold">
@@ -102,7 +104,7 @@ export default function EventChat({ eventId }: ChatProps) {
                                         </div>
                                         <p className="text-sm">{msg.content}</p>
                                         <p className="text-xs opacity-75 mt-1">
-                                            {new Date(msg.createdAt).toLocaleTimeString()}
+                                            {format(new Date(msg.createdAt), 'MMM d, HH:mm')}
                                         </p>
                                     </div>
                                 </div>
@@ -113,13 +115,18 @@ export default function EventChat({ eventId }: ChatProps) {
             )}
 
             <div className="flex gap-2 mt-4">
-
                 <Input
-
+                    className="flex-1"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder="Type your message..."
                     disabled={!isConnected}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && text.trim()) {
+                            sendMessage(text);
+                            setText('');
+                        }
+                    }}
                 />
                 <Button
                     onClick={() => {

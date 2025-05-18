@@ -19,7 +19,7 @@ export default function Header() {
     const { theme, setTheme } = useTheme();
 
     return (
-        <header className="w-full px-6 py-4 bg-background flex justify-between items-center">
+        <header className="w-full px-6 py-4 flex justify-between items-center">
             <Link href="/" className="flex-shrink-0">
                 <Image src="/logo.svg" alt="Logo" width={75} height={75} className="hover:opacity-90 transition-opacity" />
             </Link>
@@ -28,7 +28,7 @@ export default function Header() {
                 {user ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border border-gray-200 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border hover:border-input transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent">
                                 <Menu strokeWidth={1} size={20} />
                                 {user.profilePicture ? (
                                     <Image
@@ -54,7 +54,7 @@ export default function Header() {
 
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuLabel className="text-xs text-gray-500">Theme</DropdownMenuLabel>
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
                                 <Sun className="h-4 w-4" />
                                 <span>Light</span>
@@ -68,7 +68,7 @@ export default function Header() {
 
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50">
+                            <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
                                 Logout
                             </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -76,7 +76,7 @@ export default function Header() {
                 ) : (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border border-gray-200 hover:border-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <button className="px-3 py-2 flex items-center gap-3 overflow-hidden cursor-pointer border hover:border-input transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent">
                                 <Menu strokeWidth={1} size={20} />
                                 <CircleUserRound strokeWidth={1} size={30} />
                             </button>
@@ -95,7 +95,7 @@ export default function Header() {
 
                             <DropdownMenuSeparator />
 
-                            <DropdownMenuLabel className="text-xs text-gray-500">Theme</DropdownMenuLabel>
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
                                 <Sun className="h-4 w-4" />
                                 <span>Light</span>
