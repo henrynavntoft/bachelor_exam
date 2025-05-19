@@ -35,6 +35,8 @@ interface EventFormData {
     date: string;
     location: string;
     newImages?: File[];
+    images?: string[];
+    _imagesToDelete?: string[];
 }
 
 export default function ProfilePage() {
@@ -177,6 +179,29 @@ export default function ProfilePage() {
                 throw new Error('Event not found');
             }
 
+            // Process image deletions if any
+            if (data._imagesToDelete && data._imagesToDelete.length > 0) {
+                for (const imgUrl of data._imagesToDelete) {
+                    try {
+                        // Extract the image filename from the URL
+                        const imageKey = imgUrl.split('/').pop();
+                        if (imageKey) {
+                            await axiosInstance.delete(
+                                routes.upload.delete(selectedEventId),
+                                {
+                                    data: { key: imageKey },
+                                    withCredentials: true
+                                }
+                            );
+                            console.log(`Deleted image: ${imageKey}`);
+                        }
+                    } catch (err) {
+                        console.error('Failed to delete image:', err);
+                        // Continue with other deletions even if one fails
+                    }
+                }
+            }
+
             let uploadedUrls: string[] = [];
             if (data.newImages && data.newImages.length > 0) {
                 const ups = data.newImages.map(async (file: File) => {
@@ -199,7 +224,7 @@ export default function ProfilePage() {
                     description: data.description,
                     date: new Date(data.date),
                     location: data.location,
-                    images: [...currentEvent.images, ...uploadedUrls],
+                    images: [...(data.images || []), ...uploadedUrls],
                 },
                 { withCredentials: true }
             );

@@ -48,9 +48,8 @@ export default function Home() {
     <>
       <article className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Events List */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold text-[#1A6258]">Upcoming Events</h2>
+        <div>
+          <div className="flex justify-between items-center mb-4 lg:mb-0">
             <Button
               variant="outline"
               className="lg:hidden flex items-center gap-2"
@@ -60,7 +59,7 @@ export default function Home() {
               View Map
             </Button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-2 gap-4">
             {events.map((event) => (
               <Card key={event.id} event={event} />
             ))}

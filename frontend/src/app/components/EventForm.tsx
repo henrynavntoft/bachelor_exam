@@ -9,6 +9,7 @@ import { FileInput } from "@/app/components/FileInput";
 import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { MapboxLocationInput } from "./MapboxLocationInput";
 
 const eventSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -36,8 +37,12 @@ const eventSchema = z.object({
 
 type EventFormData = z.infer<typeof eventSchema>;
 
+interface ExtendedEventFormData extends EventFormData {
+    _imagesToDelete?: string[];
+}
+
 interface EventFormProps {
-    initialData?: Partial<EventFormData>;
+    initialData?: Partial<EventFormData> & { id?: string };
     onSubmit: (data: EventFormData) => Promise<void>;
     onCancel: () => void;
     existingImages?: string[];
@@ -61,22 +66,35 @@ export function EventForm({
         defaultValues: {
             title: '',
             description: '',
-            date: '',
+            date: initialData?.date ? initialData.date : '',
             location: '',
             ...initialData,
         },
     });
 
-    const handleRemoveImage = (url: string) => {
-        setImagesToDelete(prev => [...prev, url]);
+    const handleRemoveImage = (imgUrl: string) => {
+        setImagesToDelete(prev => [...prev, imgUrl]);
         if (onImageDelete) {
-            onImageDelete(url);
+            onImageDelete(imgUrl);
         }
+    };
+
+    const handleSubmit = async (data: EventFormData) => {
+        const updatedImages = existingImages?.filter(img => !imagesToDelete.includes(img)) || [];
+
+        await onSubmit({
+            ...data,
+            images: updatedImages,
+            _imagesToDelete: imagesToDelete
+        } as ExtendedEventFormData);
     };
 
     return (
         <Form {...form}>
-            <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(onSubmit)}>
+            <form
+                className="flex flex-col gap-4"
+                onSubmit={form.handleSubmit(handleSubmit)}
+            >
                 <FormField
                     control={form.control}
                     name="title"
@@ -123,7 +141,7 @@ export function EventForm({
                         <FormItem>
                             <FormLabel>Location</FormLabel>
                             <FormControl>
-                                <Input type="text" {...field} />
+                                <MapboxLocationInput value={field.value} onChange={field.onChange} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -191,7 +209,7 @@ export function EventForm({
                     >
                         {form.formState.isSubmitting ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin text-brand-foreground" />
                                 {isEditing ? 'Saving...' : 'Creating...'}
                             </>
                         ) : (

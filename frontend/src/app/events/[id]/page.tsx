@@ -8,12 +8,21 @@ import axiosInstance from "@/lib/axios";
 import { routes } from "@/lib/routes";
 import LoadingSpinner from "@/app/components/LoadingSpinner";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, MapPin, Users } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Users, MessageCircle } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 import Chat from "@/app/components/Chat";
 import { useState } from "react";
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface Event {
     id: string;
@@ -111,94 +120,117 @@ export default function EventPage() {
 
     return (
         <main className="flex flex-col gap-4">
-            <div className="">
-
-                <article className="space-y-4">
-                    <div className="">
-                        <div className="border p-6">
-                            <h2 className="text-xl font-semibold mb-4">Event Gallery</h2>
-                            <div className="grid grid-cols-2 gap-4">
-                                {event.images && event.images.length > 0 ? (
-                                    event.images.map((image, index) => (
-                                        <div key={index} className="overflow-hidden">
-                                            <Image
-                                                src={image}
-                                                alt={`${event.title} - Image ${index + 1}`}
-                                                width={300}
-                                                height={300}
-                                                className="w-full h-auto object-cover hover:scale-105 transition-transform duration-300"
-                                            />
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-center py-8">
-                                        No images available for this event
-                                    </p>
-                                )}
-                            </div>
+            <article className="space-y-4">
+                <section>
+                    <div className="p-6">
+                        <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
+                        <div className="w-full">
+                            {event.images && event.images.length > 0 ? (
+                                <Carousel
+                                    opts={{
+                                        align: "start",
+                                        loop: true,
+                                    }}
+                                    className="w-full"
+                                >
+                                    <CarouselContent className="-ml-2 md:-ml-4">
+                                        {event.images.map((image, index) => (
+                                            <CarouselItem key={index} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                                                <div className="aspect-square overflow-hidden rounded-lg">
+                                                    <Image
+                                                        src={image}
+                                                        alt={`${event.title} - Image ${index + 1}`}
+                                                        width={800}
+                                                        height={800}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
+                                            </CarouselItem>
+                                        ))}
+                                    </CarouselContent>
+                                </Carousel>
+                            ) : (
+                                <p className="text-center py-8">
+                                    No images available for this event
+                                </p>
+                            )}
                         </div>
                     </div>
+                </section>
 
-                    <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div className="">
-                            <div className="border p-6">
-                                <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
-
-                                {/* Event metadata with icons */}
-                                <div className="flex flex-col space-y-3 mb-6">
-                                    <div className="flex items-center">
-                                        <Calendar className="h-5 w-5 mr-2" />
-                                        <p>{format(new Date(event.date), "EEEE, MMMM dd, yyyy 'at' h:mm a")}</p>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <MapPin className="h-5 w-5 mr-2" />
-                                        <p>{event.location}</p>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <Users className="h-5 w-5 mr-2" />
-                                        <p>{event.attendees?.length || 0} attending</p>
-                                    </div>
+                {/* Information about the event */}
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="">
+                        <div className="p-6">
+                            {/* Event metadata with icons */}
+                            <div className="flex flex-col space-y-3 mb-6">
+                                <div className="flex items-center">
+                                    <Calendar className="h-5 w-5 mr-2" />
+                                    <p>{format(new Date(event.date), "EEEE, MMMM dd, yyyy 'at' h:mm a")}</p>
                                 </div>
-
-                                {/* Description */}
-                                <div className="prose max-w-none mb-6">
-                                    <h3 className="text-xl font-semibold mb-2">About this event</h3>
-                                    <p className="leading-relaxed whitespace-pre-line">
-                                        {event.description}
-                                    </p>
+                                <div className="flex items-center">
+                                    <MapPin className="h-5 w-5 mr-2" />
+                                    <p>{event.location}</p>
                                 </div>
+                                <div className="flex items-center">
+                                    <Users className="h-5 w-5 mr-2" />
+                                    <p>{event.attendees?.length || 0} attending</p>
+                                </div>
+                            </div>
 
-
-                                {isGuest && (
+                            {/* Attend event button */}
+                            {isGuest && (
+                                <div className="flex flex-col sm:flex-row gap-4">
                                     <Button
-                                        className="w-full sm:w-auto mt-4"
+                                        className="w-full sm:w-auto"
                                         size="lg"
                                         variant={isUserAttending ? "destructive" : "default"}
                                         onClick={handleAttend}
                                     >
                                         {isUserAttending ? "Cancel Attendance" : "Attend Event"}
                                     </Button>
-                                )}
-                            </div>
-                        </div>
 
-                        <div className="space-y-4">
-                            {/* Chat section - Only show for attendees */}
-                            {isUserAttending && (
-                                <div className="">
-                                    {chatLoading ? (
-                                        <div className="flex justify-center py-8">
-                                            <LoadingSpinner />
-                                        </div>
-                                    ) : (
-                                        <Chat eventId={eventId} />
+                                    {/* Chat button - Only show for attendees */}
+                                    {isUserAttending && (
+                                        <Dialog>
+                                            <DialogTrigger asChild>
+                                                <Button
+                                                    className="w-full sm:w-auto"
+                                                    size="lg"
+                                                    disabled={chatLoading}
+                                                >
+                                                    <MessageCircle className="mr-2 h-5 w-5" />
+                                                    Open Chat
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent className="sm:max-w-[70%] md:max-w-[60%] max-w-[90%] max-h-[90vh] h-[90vh]">
+                                                <DialogHeader>
+                                                    <DialogTitle>Event Chat</DialogTitle>
+                                                    <DialogDescription>
+                                                        Chat with other attendees of {event.title}
+                                                    </DialogDescription>
+                                                </DialogHeader>
+
+                                                <div className="flex-1 overflow-hidden h-full">
+                                                    {chatLoading ? (
+                                                        <div className="flex justify-center py-8">
+                                                            <LoadingSpinner />
+                                                        </div>
+                                                    ) : (
+                                                        <Chat eventId={eventId} />
+                                                    )}
+                                                </div>
+
+
+                                            </DialogContent>
+                                        </Dialog>
                                     )}
                                 </div>
                             )}
                         </div>
-                    </section>
-                </article>
-            </div>
+                    </div>
+                </section>
+            </article>
         </main>
     );
 } 

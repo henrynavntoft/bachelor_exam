@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { format } from "date-fns";
-import { Card as UICard, CardContent } from "@/components/ui/card";
+import { Card as EventCard, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import axiosInstance from "@/lib/axios";
 import { routes } from "@/lib/routes";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { Calendar } from "lucide-react";
 
 interface Event {
     id: string;
@@ -92,13 +93,13 @@ export default function Card({ event }: CardProps) {
     };
 
     return (
-        <UICard
-            className="cursor-pointer border hover:border-input transition-colors"
+        <EventCard
+            className="cursor-pointer border-0 p-0"
             onClick={handleClick}
         >
-            <CardContent className="p-4">
+            <CardContent className="p-0">
                 {event.images[0] && (
-                    <div className="relative w-full h-48 mb-4">
+                    <div className="relative w-full h-48 mb-2">
                         <Image
                             src={event.images[0]}
                             alt={event.title}
@@ -107,22 +108,24 @@ export default function Card({ event }: CardProps) {
                         />
                     </div>
                 )}
-                <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-                <p className="mb-2 line-clamp-2">{event.description}</p>
-                <div className="text-sm mb-4">
-                    <p>{format(new Date(event.date), 'MMM dd, yyyy')}</p>
-                    <p>{event.location}</p>
+
+                <div className="flex flex-col justify-between gap-2">
+                    <h2 className="font-semibold text-md">{event.title}</h2>
+                    <div className="flex items-center text-gray-600 text-sm">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        {format(new Date(event.date), 'MMM dd, yyyy')}
+                    </div>
+                    {isGuest && (
+                        <Button
+                            className="w-full"
+                            variant={isUserAttending ? "destructive" : "default"}
+                            onClick={handleAttend}
+                        >
+                            {isUserAttending ? "Cancel Attendance" : "Attend Event"}
+                        </Button>
+                    )}
                 </div>
-                {isGuest && (
-                    <Button
-                        className="w-full"
-                        variant={isUserAttending ? "destructive" : "default"}
-                        onClick={handleAttend}
-                    >
-                        {isUserAttending ? "Cancel Attendance" : "Attend Event"}
-                    </Button>
-                )}
             </CardContent>
-        </UICard>
+        </EventCard>
     );
 }

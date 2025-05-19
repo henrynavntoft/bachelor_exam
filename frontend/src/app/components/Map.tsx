@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import axios from 'axios';
 import MapPopup from './MapPopup';
 import { renderToString } from 'react-dom/server';
+import { useTheme } from 'next-themes';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
@@ -25,13 +26,16 @@ export default function Map({ events }: MapProps) {
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const markersRef = useRef<mapboxgl.Marker[]>([]);
     const activePopupRef = useRef<mapboxgl.Popup | null>(null);
+    const { theme } = useTheme();
 
     useEffect(() => {
         if (!mapContainerRef.current) return;
 
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/streets-v12',
+            style: theme === 'dark'
+                ? 'mapbox://styles/mapbox/dark-v11'
+                : 'mapbox://styles/mapbox/streets-v12',
             center: [10.5683, 53.6761],
             zoom: 5,
         });
@@ -47,7 +51,18 @@ export default function Map({ events }: MapProps) {
         mapRef.current = map;
 
         return () => map.remove();
-    }, []);
+    }, [theme]);
+
+    // When theme changes, update the map style
+    useEffect(() => {
+        if (!mapRef.current) return;
+
+        mapRef.current.setStyle(
+            theme === 'dark'
+                ? 'mapbox://styles/mapbox/dark-v11'
+                : 'mapbox://styles/mapbox/streets-v12'
+        );
+    }, [theme]);
 
     // Add markers when events change
     useEffect(() => {
@@ -57,14 +72,48 @@ export default function Map({ events }: MapProps) {
         markersRef.current.forEach(marker => marker.remove());
         markersRef.current = [];
 
+        // Add custom popup styles once, using CSS variables from your theme
+        const popupStyle = document.createElement('style');
+        popupStyle.textContent = `
+            .mapboxgl-popup-content {
+                padding: 0 !important;
+                background-color: var(--background) !important;
+                color: var(--foreground) !important;
+                overflow: hidden !important;
+                border: none;
+                border-radius: 0 !important;
+                outline: none;
+            }
+            
+            .mapboxgl-popup-close-button {
+                padding: 8px !important;
+                border-radius: 0 !important;
+                font-size: 20px !important;
+                color: var(--muted-foreground) !important;
+                background: transparent !important;
+                border: none !important;
+                cursor: pointer !important;
+                transition: color 0.2s !important;
+                z-index: 10 !important;
+            }
+            
+            .mapboxgl-popup-close-button:hover {
+                border-radius: 0 !important;
+                color: var(--brand) !important;
+                background: transparent !important;
+            }
+            
+            
+        `;
+        document.head.appendChild(popupStyle);
+
         // Add markers for each event
         events.forEach(event => {
             // Create a popup with a clickable link to the event detail page
             const popup = new mapboxgl.Popup({
                 offset: 25,
                 closeButton: true,
-                closeOnClick: false,
-                className: 'custom-popup'
+                closeOnClick: false
             }).setHTML(renderToString(
                 <MapPopup
                     id={event.id}
@@ -73,33 +122,6 @@ export default function Map({ events }: MapProps) {
                     date={event.date}
                 />
             ));
-
-            // Add custom CSS for the popup
-            const style = document.createElement('style');
-            style.textContent = `
-                .custom-popup .mapboxgl-popup-content {
-                    padding: 0;
-                    border-radius: 8px;
-                    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-                }
-                .custom-popup .mapboxgl-popup-close-button {
-                    padding: 8px;
-                    font-size: 20px;
-                    color: #666;
-                    background: transparent;
-                    border: none;
-                    cursor: pointer;
-                    transition: color 0.2s;
-                }
-                .custom-popup .mapboxgl-popup-close-button:hover {
-                    color: #1A6258;
-                    background: transparent;
-                }
-                .custom-popup .mapboxgl-popup-tip {
-                    border-top-color: white;
-                }
-            `;
-            document.head.appendChild(style);
 
             // Create a custom marker element
             const el = document.createElement('div');
@@ -153,7 +175,7 @@ export default function Map({ events }: MapProps) {
                     console.error('Error geocoding location:', error);
                 });
         });
-    }, [events]);
+    }, [events, theme]);
 
     return (
         <div

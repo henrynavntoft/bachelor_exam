@@ -131,6 +131,28 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Override browser default blue outline/focus colors */
+  input:focus,
+  input:active,
+  button:focus,
+  button:active,
+  select:focus,
+  select:active,
+  textarea:focus,
+  textarea:active {
+    outline-color: var(--brand) !important;
+  }
+
+  /* Remove blue autofill color */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px var(--background) inset;
+    -webkit-text-fill-color: var(--foreground);
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: var(--foreground);
+  }
 }
 
 @layer utilities {

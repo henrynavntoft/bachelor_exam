@@ -11,8 +11,15 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CircleUserRound, Menu, Moon, Sun } from 'lucide-react';
+import { Menu, Moon, Sun, CircleUserRound } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+
+// Helper function to get user initials
+const getInitials = (firstName?: string, lastName?: string): string => {
+    if (!firstName && !lastName) return "?";
+    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
+};
 
 export default function Header() {
     const { user, logout } = useAuth();
@@ -28,19 +35,14 @@ export default function Header() {
                 {user ? (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer border hover:border-input transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent">
+                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer">
                                 <Menu strokeWidth={1} size={20} />
-                                {user.profilePicture ? (
-                                    <Image
-                                        src={user.profilePicture}
-                                        alt="Profile Picture"
-                                        width={30}
-                                        height={30}
-                                        className="rounded-full aspect-square object-cover"
-                                    />
-                                ) : (
-                                    <CircleUserRound strokeWidth={1} size={30} />
-                                )}
+                                <Avatar>
+                                    <AvatarImage src={user.profilePicture || ""} alt={`${user.firstName} ${user.lastName}`} />
+                                    <AvatarFallback className="bg-brand text-brand-foreground">
+                                        {getInitials(user.firstName, user.lastName)}
+                                    </AvatarFallback>
+                                </Avatar>
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
@@ -76,9 +78,13 @@ export default function Header() {
                 ) : (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="px-3 py-2 flex items-center gap-3 overflow-hidden cursor-pointer border hover:border-input transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent">
+                            <button className="px-3 py-2 flex items-center gap-3 overflow-hidden cursor-pointer">
                                 <Menu strokeWidth={1} size={20} />
-                                <CircleUserRound strokeWidth={1} size={30} />
+                                <Avatar>
+                                    <AvatarFallback className="bg-brand">
+                                        <CircleUserRound strokeWidth={1} size={20} />
+                                    </AvatarFallback>
+                                </Avatar>
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">

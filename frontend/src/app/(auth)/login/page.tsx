@@ -121,7 +121,7 @@ export default function LoginPage() {
                     <Button type="submit" className="w-full mt-2" disabled={form.formState.isSubmitting}>
                         {form.formState.isSubmitting ? (
                             <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin text-brand-foreground" />
                                 Logging in...
                             </>
                         ) : (
