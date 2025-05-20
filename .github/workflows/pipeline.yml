@@ -53,15 +53,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Add VPS to known hosts
+      - name: Manually set up SSH
         run: |
           mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: ssh -o BatchMode=yes -T ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} echo "SSH connection successful"
 
       - name: Pull, Deploy, Prune via SSH
         run: |
@@ -83,4 +83,12 @@ jobs:
             docker volume prune -f
             echo "== Listing running containers =="
             docker ps -a
+            echo "== Checking for unhealthy containers =="
+            docker ps --filter "health=unhealthy" --format "table {{.Names}}\t{{.Status}}"
+
+            echo "== Backend Logs =="
+            docker logs backend || true
+
+            echo "== Frontend Logs =="
+            docker logs frontend || true
           EOF

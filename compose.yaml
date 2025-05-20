@@ -3,7 +3,7 @@ services:
     container_name: frontend
     volumes:
     - ./frontend:/app:cached
-    - /app/node_modules
+    - node_modules_frontend:/app/node_modules
     build:
       context: ./frontend
       dockerfile: frontend.dockerfile
@@ -20,7 +20,7 @@ services:
     container_name: backend
     volumes:
     - ./backend:/app:cached
-    - /app/node_modules
+    - node_modules_backend:/app/node_modules
     build:
       context: ./backend
       dockerfile: backend.dockerfile
@@ -41,7 +41,7 @@ services:
     env_file:
       - ./backend/.env.${RTE}
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     networks:
       - internal-network
     healthcheck:
@@ -73,3 +73,8 @@ networks:
   external-network:
     driver: bridge
 
+
+volumes:
+  node_modules_frontend:
+  node_modules_backend:
+  pgdata:
