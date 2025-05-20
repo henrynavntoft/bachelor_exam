@@ -50,14 +50,16 @@ export function AdminDashboard({
             <section>
                 <h2 className="text-2xl font-semibold mb-4">All Users</h2>
                 <div className="grid gap-4">
-                    {users.map((user) => (
+                    {Array.isArray(users) ? users.map((user) => (
                         <UserCard
                             key={user.id}
                             user={user}
                             onDelete={onDeleteUser}
                             onReactivate={onReactivateUser}
                         />
-                    ))}
+                    )) : (
+                        <p className="text-muted-foreground">No users found or data is loading.</p>
+                    )}
                 </div>
             </section>
 
@@ -65,14 +67,16 @@ export function AdminDashboard({
             <section>
                 <h2 className="text-2xl font-semibold mb-4">All Events</h2>
                 <div className="grid gap-4">
-                    {events.map((event) => (
+                    {Array.isArray(events) ? events.map((event) => (
                         <EventCard
                             key={event.id}
                             event={event}
                             onDelete={onDeleteEvent}
                             isAdmin
                         />
-                    ))}
+                    )) : (
+                        <p className="text-muted-foreground">No events found or data is loading.</p>
+                    )}
                 </div>
             </section>
         </article>

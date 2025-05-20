@@ -4,6 +4,6 @@ export interface User {
     lastName: string;
     email: string;
     role: string;
-    isDeleted: boolean;
+    isDeleted?: boolean;
     profilePicture?: string;
 } 

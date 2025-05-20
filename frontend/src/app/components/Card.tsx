@@ -99,22 +99,29 @@ export default function Card({ event, showAttendButton = false }: CardProps) {
             onClick={handleClick}
         >
             <CardContent className="p-0">
-                {event.images[0] && (
+                {event?.images && Array.isArray(event.images) && event.images[0] ? (
                     <div className="relative w-full h-48 mb-2">
                         <Image
                             src={event.images[0]}
-                            alt={event.title}
+                            alt={event.title || 'Event'}
                             fill
                             className="object-cover"
                         />
                     </div>
+                ) : (
+                    <div className="w-full h-48 mb-2 bg-muted flex items-center justify-center">
+                        <Calendar className="h-8 w-8 text-muted-foreground" />
+                    </div>
                 )}
 
-                <div className="flex flex-col justify-between gap-2">
-                    <h2 className="font-semibold text-md">{event.title}</h2>
+                <div className="flex flex-col justify-between gap-2 p-2">
+                    <h2 className="font-semibold text-md">{event?.title || 'Untitled Event'}</h2>
                     <div className="flex items-center text-gray-600 text-sm">
                         <Calendar className="h-4 w-4 mr-2" />
-                        {format(new Date(event.date), 'MMM dd, yyyy')}
+                        {event?.date ?
+                            format(new Date(event.date), 'MMM dd, yyyy') :
+                            'Date not specified'
+                        }
                     </div>
                     {isGuest && showAttendButton && (
                         <Button

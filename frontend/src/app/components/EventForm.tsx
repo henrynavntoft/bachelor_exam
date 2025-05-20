@@ -64,11 +64,14 @@ export function EventForm({
     const form = useForm<EventFormData>({
         resolver: zodResolver(eventSchema),
         defaultValues: {
-            title: '',
-            description: '',
-            date: initialData?.date ? initialData.date : '',
-            location: '',
-            ...initialData,
+            title: initialData?.title || '',
+            description: initialData?.description || '',
+            location: initialData?.location || '',
+            // For date, convert to YYYY-MM-DD format required by the date input
+            date: initialData?.date
+                ? new Date(initialData.date).toISOString().slice(0, 16) // Format as YYYY-MM-DDThh:mm
+                : '',
+            images: initialData?.images || [],
         },
     });
 
@@ -80,8 +83,10 @@ export function EventForm({
     };
 
     const handleSubmit = async (data: EventFormData) => {
+        // Filter out any images that were marked for deletion
         const updatedImages = existingImages?.filter(img => !imagesToDelete.includes(img)) || [];
 
+        // Include the updated images list and the list of images to delete
         await onSubmit({
             ...data,
             images: updatedImages,
@@ -128,7 +133,7 @@ export function EventForm({
                         <FormItem>
                             <FormLabel>Date</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} />
+                                <Input type="datetime-local" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

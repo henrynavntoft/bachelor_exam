@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth, User } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import LoadingSpinner from '../../components/LoadingSpinner';
@@ -10,13 +10,12 @@ import { routes } from '@/lib/routes';
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import EventCard from "@/app/components/Card";
-import { ProfileForm } from '@/app/components/ProfileForm';
 import { EventForm } from '@/app/components/EventForm';
 import { HostEventCard } from '@/app/components/HostEventCard';
 import { Event } from '@/types/event';
+import { ProfileSection } from '@/components/users/ProfileSection';
 import {
     AlertDialog,
-    AlertDialogTrigger,
     AlertDialogContent,
     AlertDialogHeader,
     AlertDialogTitle,
@@ -40,18 +39,16 @@ interface EventFormData {
 }
 
 export default function ProfilePage() {
-    const { isAuthenticated, isHost, isGuest, isLoading, user } = useAuth();
-    const currentUser = user as User;
+    const { isAuthenticated, isHost, user, isLoading, updateUserProfile } = useAuth();
     const router = useRouter();
     const queryClient = useQueryClient();
 
     // State
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
-    const [isEditingProfile, setIsEditingProfile] = useState(false);
 
     // Load host events
-    const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
+    const { data: events = [] } = useQuery<Event[]>({
         queryKey: ['host-events'],
         queryFn: async () => {
             const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
@@ -92,12 +89,14 @@ export default function ProfilePage() {
 
     // Submit handlers
     async function handleProfileSubmit(data: ProfileFormData) {
+        if (!user) return;
+
         try {
             let profilePictureUrl = data.profilePicture;
             if (data.profilePicture instanceof File) {
                 const fd = new FormData();
                 fd.append('image', data.profilePicture);
-                const uploadUrl = routes.upload.profile(currentUser.id);
+                const uploadUrl = routes.upload.profile(user.id);
                 const res = await axiosInstance.post(
                     uploadUrl,
                     fd,
@@ -107,17 +106,18 @@ export default function ProfilePage() {
             }
 
             await axiosInstance.put(
-                routes.users.update(currentUser.id),
-                { ...data, profilePicture: profilePictureUrl, email: currentUser.email },
+                routes.users.update(user.id),
+                { ...data, profilePicture: profilePictureUrl, email: user.email },
                 { withCredentials: true }
             );
 
-            if (user) {
-                user.firstName = data.firstName;
-                user.lastName = data.lastName;
-                user.profilePicture = profilePictureUrl as string;
-            }
-            setIsEditingProfile(false);
+            // Update the Auth context to reflect changes immediately across the app
+            updateUserProfile({
+                firstName: data.firstName,
+                lastName: data.lastName,
+                profilePicture: profilePictureUrl as string
+            });
+
             toast.success("Profile updated successfully");
         } catch (err) {
             console.error('Update profile failed', err);
@@ -250,155 +250,110 @@ export default function ProfilePage() {
         }
     }
 
-    if (isLoading || (isHost && eventsLoading)) {
-        return <LoadingSpinner />;
-    }
-    if (!isHost && !isGuest) {
+    // Loading state
+    if (isLoading || !user) {
         return <LoadingSpinner />;
     }
 
-    return isHost ? (
-        <article className="">
-            <h1 className="text-2xl font-bold mb-4 text-center">Host Profile</h1>
+    return (
+        <div className="space-y-10">
+            {/* User Profile */}
+            <ProfileSection
+                user={user}
+                onUpdate={handleProfileSubmit}
+                showEditButton={true}
+            />
 
-            {/* User profile info */}
-            <div className="mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">Your Profile</h3>
-                    {isEditingProfile ? (
-                        <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(false)}>
-                            Cancel
-                        </Button>
-                    ) : (
-                        <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)}>
-                            Edit Profile
-                        </Button>
-                    )}
-                </div>
-                {isEditingProfile ? (
-                    <ProfileForm
-                        initialData={{
-                            firstName: currentUser.firstName,
-                            lastName: currentUser.lastName,
-                            profilePicture: currentUser.profilePicture,
-                        }}
-                        onSubmit={handleProfileSubmit}
-                        onCancel={() => setIsEditingProfile(false)}
-                    />
-                ) : (
-                    <div className="space-y-2">
-                        <p><strong>Name:</strong> {currentUser.firstName} {currentUser.lastName}</p>
-                        <p><strong>Email:</strong> {currentUser.email}</p>
+            {/* Event management sections can continue below */}
+            {isHost ? (
+                <article className="">
+                    <h1 className="text-2xl font-bold mb-4 text-center">Host Profile</h1>
+
+                    {/* CREATE EVENT */}
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium">Your Events</h3>
+                        {isCreating ? (
+                            <Button size="sm" variant="outline" onClick={() => setIsCreating(false)}>
+                                Cancel
+                            </Button>
+                        ) : (
+                            <Button size="sm" onClick={() => setIsCreating(true)}>
+                                Create Event
+                            </Button>
+                        )}
                     </div>
-                )}
-            </div>
 
-            {/* CREATE EVENT */}
-            <AlertDialog open={isCreating} onOpenChange={setIsCreating}>
-                <AlertDialogTrigger asChild>
-                    <Button variant="outline">Create New Event</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Create Event</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Fill in the details below and click Create Event.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <EventForm
-                        onSubmit={handleCreateSubmit}
-                        onCancel={() => setIsCreating(false)}
-                    />
-                </AlertDialogContent>
-            </AlertDialog>
+                    {isCreating && (
+                        <div className="my-4">
+                            <EventForm onSubmit={handleCreateSubmit} onCancel={() => setIsCreating(false)} />
+                        </div>
+                    )}
 
-            {/* LIST & EDIT EVENTS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-                {events.filter(ev => ev.hostId === currentUser.id).map(event => (
-                    <HostEventCard
-                        key={event.id}
-                        event={event}
-                        onEdit={(event) => {
-                            setSelectedEventId(event.id);
-                        }}
-                        onDelete={handleDelete}
-                    />
-                ))}
-            </div>
+                    {/* Event list */}
+                    <div className="space-y-4 mt-6">
+                        {events.length === 0 ? (
+                            <p className="text-center text-muted-foreground">You haven&apos;t created any events yet.</p>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {events.map((event) => (
+                                    <HostEventCard
+                                        key={event.id}
+                                        event={event}
+                                        onEdit={() => setSelectedEventId(event.id)}
+                                        onDelete={() => handleDelete(event.id)}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
-            {/* EDIT EVENT DIALOG */}
-            {selectedEventId && (
-                <AlertDialog open={!!selectedEventId} onOpenChange={() => setSelectedEventId(null)}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Edit Event</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Update details and Save Changes.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <EventForm
-                            initialData={events.find(ev => ev.id === selectedEventId)}
-                            existingImages={events.find(ev => ev.id === selectedEventId)?.images || []}
-                            onSubmit={handleEditSubmit}
-                            onCancel={() => setSelectedEventId(null)}
-                            isEditing
-                        />
-                    </AlertDialogContent>
-                </AlertDialog>
+                    {/* Edit event modal */}
+                    {selectedEventId && (
+                        <AlertDialog open={!!selectedEventId} onOpenChange={(open) => !open && setSelectedEventId(null)}>
+                            <AlertDialogContent className="max-w-3xl">
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Edit Event</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Make changes to your event here.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                {selectedEventId && (
+                                    <EventForm
+                                        initialData={events.find(e => e.id === selectedEventId)}
+                                        onSubmit={handleEditSubmit}
+                                        onCancel={() => setSelectedEventId(null)}
+                                        existingImages={events.find(e => e.id === selectedEventId)?.images || []}
+                                        isEditing
+                                    />
+                                )}
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </article>
+            ) : (
+                <article className="">
+                    <h1 className="text-2xl font-bold mb-4 text-center">Guest Profile</h1>
+
+                    <div className="pt-6">
+                        <h2 className="text-xl font-semibold mb-4">Your RSVPs</h2>
+                        {isLoadingEvents ? (
+                            <LoadingSpinner />
+                        ) : rsvpedEvents && rsvpedEvents.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {rsvpedEvents.map((event) => (
+                                    <EventCard
+                                        key={event.id}
+                                        event={event}
+                                        showAttendButton={true}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-center text-muted-foreground">You haven&apos;t RSVPed to any events yet.</p>
+                        )}
+                    </div>
+                </article>
             )}
-        </article>
-    ) : (
-        <article className="">
-            <h1 className="text-2xl font-bold mb-4 text-center">Guest Profile</h1>
-
-            {/* User profile info */}
-            <div className="mb-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium">Your Profile</h3>
-                    {isEditingProfile ? (
-                        <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(false)}>
-                            Cancel
-                        </Button>
-                    ) : (
-                        <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(true)}>
-                            Edit Profile
-                        </Button>
-                    )}
-                </div>
-                {isEditingProfile ? (
-                    <ProfileForm
-                        initialData={{
-                            firstName: currentUser.firstName,
-                            lastName: currentUser.lastName,
-                            profilePicture: currentUser.profilePicture,
-                        }}
-                        onSubmit={handleProfileSubmit}
-                        onCancel={() => setIsEditingProfile(false)}
-                    />
-                ) : (
-                    <div className="space-y-2">
-                        <p><strong>Name:</strong> {currentUser.firstName} {currentUser.lastName}</p>
-                        <p><strong>Email:</strong> {currentUser.email}</p>
-                    </div>
-                )}
-            </div>
-
-            <div className="pt-6">
-                <h2 className="text-xl font-semibold mb-4">Events You&apos;re Attending</h2>
-                {isLoadingEvents ? (
-                    <div className="flex justify-center py-8">
-                        <LoadingSpinner />
-                    </div>
-                ) : rsvpedEvents && rsvpedEvents.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {rsvpedEvents.map((event) => (
-                            <EventCard key={event.id} event={event} />
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-gray-600">You haven&apos;t RSVPed to any events yet.</p>
-                )}
-            </div>
-        </article>
+        </div>
     );
 }

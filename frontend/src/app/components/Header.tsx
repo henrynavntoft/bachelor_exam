@@ -13,13 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Menu, Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-// Helper function to get user initials
-const getInitials = (firstName?: string, lastName?: string): string => {
-    if (!firstName && !lastName) return "?";
-    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
-};
+import { UserAvatar } from '@/components/users/UserAvatar';
 
 export default function Header() {
     const { user, logout } = useAuth();
@@ -39,12 +33,7 @@ export default function Header() {
                                 <DropdownMenuTrigger asChild>
                                     <button className="px-3 py-2 flex items-center gap-3 cursor-pointer rounded-md hover:bg-accent">
                                         <Menu strokeWidth={1} size={20} />
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={user.profilePicture || ""} alt={`${user.firstName} ${user.lastName}`} />
-                                            <AvatarFallback className="bg-brand text-brand-foreground">
-                                                {getInitials(user.firstName, user.lastName)}
-                                            </AvatarFallback>
-                                        </Avatar>
+                                        <UserAvatar user={user} size="md" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-56">
@@ -92,11 +81,7 @@ export default function Header() {
                                 <DropdownMenuTrigger asChild>
                                     <button className="px-3 py-2 flex items-center gap-3 cursor-pointer rounded-md hover:bg-accent">
                                         <Menu strokeWidth={1} size={20} />
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarFallback className="bg-brand text-brand-foreground">
-                                                ?
-                                            </AvatarFallback>
-                                        </Avatar>
+                                        <UserAvatar fallback="?" size="md" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-48">

@@ -22,6 +22,7 @@ interface AuthContextProps {
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     setUser: (user: User | null) => void;
+    updateUserProfile: (data: { firstName?: string; lastName?: string; profilePicture?: string }) => void;
 }
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
@@ -63,8 +64,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         router.push('/login');
     };
 
+    const updateUserProfile = (data: { firstName?: string; lastName?: string; profilePicture?: string }) => {
+        if (!user) return;
+
+        // Update the local user state immediately for instant UI updates
+        setUser({
+            ...user,
+            ...data
+        });
+    };
+
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, setUser }}>
+        <AuthContext.Provider value={{
+            user,
+            isAuthenticated: !!user,
+            isLoading,
+            login,
+            logout,
+            setUser,
+            updateUserProfile
+        }}>
             {children}
         </AuthContext.Provider>
     );

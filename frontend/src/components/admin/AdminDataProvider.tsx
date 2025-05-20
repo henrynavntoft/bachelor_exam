@@ -33,8 +33,22 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
     } = useQuery<User[]>({
         queryKey: ['users'],
         queryFn: async () => {
-            const res = await axiosInstance.get(routes.users.all, { withCredentials: true });
-            return res.data;
+            try {
+                const res = await axiosInstance.get(routes.users.all, { withCredentials: true });
+                // Handle both cases - direct array or nested inside an object
+                const usersData = res.data.users || res.data;
+
+                // Ensure we always return an array
+                if (Array.isArray(usersData)) {
+                    return usersData;
+                } else {
+                    console.error('Users data is not an array:', usersData);
+                    return [];
+                }
+            } catch (error) {
+                console.error('Error fetching users:', error);
+                return [];
+            }
         },
         enabled: isAuthenticated && isAdmin,
     });
@@ -47,8 +61,22 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
     } = useQuery<Event[]>({
         queryKey: ['events'],
         queryFn: async () => {
-            const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
-            return res.data.events || [];
+            try {
+                const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
+                // Make sure we're handling the response correctly - check if events is nested
+                const eventsData = res.data.events || res.data;
+
+                // Ensure we always return an array
+                if (Array.isArray(eventsData)) {
+                    return eventsData;
+                } else {
+                    console.error('Events data is not an array:', eventsData);
+                    return [];
+                }
+            } catch (error) {
+                console.error('Error fetching events:', error);
+                return [];
+            }
         },
         enabled: isAuthenticated && isAdmin,
     });

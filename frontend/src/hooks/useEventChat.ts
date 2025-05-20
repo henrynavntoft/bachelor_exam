@@ -47,6 +47,7 @@ export function useEventChat(eventId: string) {
             console.log('Socket connected');
             setIsConnected(true);
             setError(null); // Clear any previous connection errors
+
             // Join the event chat room
             socket.emit('join-event-chat', eventId);
         });

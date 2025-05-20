@@ -5,7 +5,7 @@ export interface Event {
     date: string;
     location: string;
     hostId: string;
-    images?: string[];
+    images: string[];
     attendees?: {
         userId: string;
         eventId: string;

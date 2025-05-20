@@ -21,7 +21,7 @@ interface MapProps {
     events: Event[];
 }
 
-export default function Map({ events }: MapProps) {
+export default function Map({ events = [] }: MapProps) {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<mapboxgl.Map | null>(null);
     const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -68,6 +68,9 @@ export default function Map({ events }: MapProps) {
     useEffect(() => {
         if (!mapRef.current) return;
 
+        // Ensure events is an array
+        const validEvents = Array.isArray(events) ? events : [];
+
         // Clear existing markers
         markersRef.current.forEach(marker => marker.remove());
         markersRef.current = [];
@@ -105,10 +108,14 @@ export default function Map({ events }: MapProps) {
         `;
         document.head.appendChild(popupStyle);
 
+        // Add markers for each event with additional safety checks
+        validEvents.forEach(event => {
+            // Skip events with missing required data
+            if (!event || !event.id || !event.location) {
+                console.warn('Skipping invalid event:', event);
+                return;
+            }
 
-
-        // Add markers for each event
-        events.forEach(event => {
             // Create a popup with a clickable link to the event detail page
             const popup = new mapboxgl.Popup({
                 offset: 25,
@@ -117,9 +124,9 @@ export default function Map({ events }: MapProps) {
             }).setHTML(renderToString(
                 <MapPopup
                     id={event.id}
-                    title={event.title}
-                    location={event.location}
-                    date={event.date}
+                    title={event.title || 'Unnamed Event'}
+                    location={event.location || 'Unknown Location'}
+                    date={event.date || 'No date provided'}
                 />
             ));
 
