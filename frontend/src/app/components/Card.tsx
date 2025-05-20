@@ -28,9 +28,10 @@ interface Event {
 
 interface CardProps {
     event: Event;
+    showAttendButton?: boolean; // Optional prop to show/hide attend button
 }
 
-export default function Card({ event }: CardProps) {
+export default function Card({ event, showAttendButton = false }: CardProps) {
     const router = useRouter();
     const { isGuest, user } = useAuth();
     const queryClient = useQueryClient();
@@ -115,7 +116,7 @@ export default function Card({ event }: CardProps) {
                         <Calendar className="h-4 w-4 mr-2" />
                         {format(new Date(event.date), 'MMM dd, yyyy')}
                     </div>
-                    {isGuest && (
+                    {isGuest && showAttendButton && (
                         <Button
                             className="w-full"
                             variant={isUserAttending ? "destructive" : "default"}

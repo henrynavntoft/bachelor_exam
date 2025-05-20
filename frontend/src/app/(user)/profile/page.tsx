@@ -55,7 +55,7 @@ export default function ProfilePage() {
         queryKey: ['host-events'],
         queryFn: async () => {
             const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
-            return res.data;
+            return res.data.events || [];
         },
         enabled: isAuthenticated && isHost,
     });
@@ -65,7 +65,8 @@ export default function ProfilePage() {
         queryKey: ["rsvpedEvents"],
         queryFn: async () => {
             const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
-            return res.data.filter((event: Event) =>
+            const events = res.data.events || [];
+            return events.filter((event: Event) =>
                 event.attendees?.some(attendee => attendee.userId === user?.id)
             );
         },

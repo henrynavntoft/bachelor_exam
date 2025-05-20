@@ -3,122 +3,23 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import axiosInstance from '@/lib/axios';
-import { routes } from '@/lib/routes';
-import { format } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-    AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { Card, CardContent } from "@/components/ui/card";
-import Image from 'next/image';
-
-interface User {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    name: string;
-    role: string;
-    isDeleted: boolean;
-    profilePicture: string;
-}
-
-interface Event {
-    id: string;
-    title: string;
-    description: string;
-    date: string;
-    location: string;
-}
+import { AdminDataProvider } from '@/components/admin/AdminDataProvider';
+import { AdminDashboard } from '@/components/admin/AdminDashboard';
 
 export default function DashboardPage() {
     const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
     const router = useRouter();
-    const { data: users = [], isLoading: usersLoading, error } = useQuery<User[]>({
-        queryKey: ['users'],
-        queryFn: async () => {
-            const res = await axiosInstance.get(routes.users.all, { withCredentials: true });
-            return res.data;
-        },
-        enabled: isAuthenticated && isAdmin,
-    });
 
-    const { data: events = [], isLoading: eventsLoading, error: eventsError } = useQuery<Event[]>({
-        queryKey: ['events'],
-        queryFn: async () => {
-            const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
-            return res.data;
-        },
-        enabled: isAuthenticated && isAdmin,
-    });
-
-
-    const queryClient = useQueryClient();
-
-    const deleteUserMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await axiosInstance.delete(routes.users.delete(id), { withCredentials: true });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['users'] });
-        }
-    });
-
-    const deleteEventMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await axiosInstance.delete(routes.events.delete(id), { withCredentials: true });
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['events'] });
-        }
-    });
-
-    const reactivateUserMutation = useMutation({
-        mutationFn: async (userId: string) => {
-            const user = users.find(u => u.id === userId);
-            if (!user) throw new Error('User not found');
-
-            return axiosInstance.put(
-                routes.users.update(userId),
-                {
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    email: user.email,
-                    role: user.role,
-                    isDeleted: false
-                },
-                { withCredentials: true }
-            );
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['users'] });
-        },
-    });
-
-
+    // Auth protection
     useEffect(() => {
         if (!isLoading && (!isAuthenticated || !isAdmin)) {
             router.push('/login');
         }
     }, [isAuthenticated, isAdmin, isLoading, router]);
 
-    if (isLoading || usersLoading || eventsLoading) {
-        return <LoadingSpinner />;
-    }
-
-    if (error || eventsError) {
-        return <div className="text-center mt-8 text-red-500">Failed to load users or events.</div>;
+    // If still loading, show nothing to prevent flicker
+    if (isLoading) {
+        return null;
     }
 
     if (!isAuthenticated || !isAdmin) {
@@ -126,89 +27,20 @@ export default function DashboardPage() {
     }
 
     return (
-        <article>
-            <div className="flex flex-row justify-between items-center gap-2">
-                <p>{user?.firstName} {user?.lastName}</p>
-                {user?.profilePicture && (
-                    <Image src={user.profilePicture} alt="Profile Picture" width={50} height={50} />
-                )}
-            </div>
-            <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-            <h2 className="text-2xl font-semibold mb-4">All Users:</h2>
-            <div className="grid gap-4">
-                {users.map((user) => (
-                    <Card key={user.id}>
-                        <CardContent className="flex flex-row justify-between items-center gap-2">
-                            <div className="flex flex-col gap-2">
-                                <div className="font-semibold">{user.firstName} {user.lastName}</div>
-                                <div>{user.email}</div>
-                                <div className="text-sm text-gray-500 capitalize">{user.role}</div>
-                                <div className="text-sm text-gray-500 capitalize">{user.isDeleted ? 'Deleted' : 'Active'}</div>
-                            </div>
-                            {user.isDeleted && (
-                                <Button variant="outline" onClick={() => reactivateUserMutation.mutate(user.id)}>
-                                    Reactivate
-                                </Button>
-                            )}
-
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">Delete</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Are you sure you want to delete {user.name}? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={() => deleteUserMutation.mutate(user.id)}>
-                                            Delete
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
-            <h2 className="text-2xl font-semibold mt-8 mb-4">All Events:</h2>
-            <div className="grid gap-4">
-                {events.map((event) => (
-                    <Card key={event.id}>
-                        <CardContent className="flex flex-row justify-between items-center gap-2">
-                            <div className="flex flex-col gap-2">
-                                <div className="font-semibold">{event.title}</div>
-                                <div className="text-gray-600">{event.location}</div>
-                                <div className="text-sm text-gray-500">{format(new Date(event.date), 'MM/dd/yyyy')}</div>
-                            </div>
-
-                            <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">Delete</Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Event</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Are you sure you want to delete {event.title}? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction className="bg-red-500 hover:bg-red-600" onClick={() => deleteEventMutation.mutate(event.id)}>
-                                            Delete
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        </article>
+        <AdminDataProvider>
+            {({ users, events, deleteUser, deleteEvent, reactivateUser }) => (
+                <AdminDashboard
+                    currentUser={user ? {
+                        ...user,
+                        isDeleted: false
+                    } : null}
+                    users={users}
+                    events={events}
+                    onDeleteUser={deleteUser}
+                    onDeleteEvent={deleteEvent}
+                    onReactivateUser={reactivateUser}
+                />
+            )}
+        </AdminDataProvider>
     );
 }

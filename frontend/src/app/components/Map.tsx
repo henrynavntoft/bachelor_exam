@@ -36,8 +36,8 @@ export default function Map({ events }: MapProps) {
             style: theme === 'dark'
                 ? 'mapbox://styles/mapbox/dark-v11'
                 : 'mapbox://styles/mapbox/streets-v12',
-            center: [10.5683, 53.6761],
-            zoom: 5,
+            center: [10.5683, 51.6761],
+            zoom: 4,
         });
 
         // Close popup when clicking on the map
@@ -102,10 +102,10 @@ export default function Map({ events }: MapProps) {
                 color: var(--brand) !important;
                 background: transparent !important;
             }
-            
-            
         `;
         document.head.appendChild(popupStyle);
+
+
 
         // Add markers for each event
         events.forEach(event => {
@@ -123,6 +123,13 @@ export default function Map({ events }: MapProps) {
                 />
             ));
 
+            // Close popup when its close button is clicked
+            popup.on('close', () => {
+                if (activePopupRef.current === popup) {
+                    activePopupRef.current = null;
+                }
+            });
+
             // Create a custom marker element
             const el = document.createElement('div');
             el.className = 'marker';
@@ -135,15 +142,20 @@ export default function Map({ events }: MapProps) {
             // Create and add the marker
             const marker = new mapboxgl.Marker(el)
                 .setLngLat([12.5683, 55.6761]) // Default to Copenhagen for now
-                .setPopup(popup)
                 .addTo(mapRef.current!);
 
             // Handle marker click
-            marker.getElement().addEventListener('click', () => {
+            marker.getElement().addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent map click from immediately closing the popup
+
                 // Close any existing popup
                 if (activePopupRef.current) {
                     activePopupRef.current.remove();
                 }
+
+                // Set popup on marker and open it
+                marker.setPopup(popup);
+                marker.togglePopup();
 
                 // Set this popup as active
                 activePopupRef.current = popup;
@@ -151,10 +163,10 @@ export default function Map({ events }: MapProps) {
                 // Get the marker's position
                 const lngLat = marker.getLngLat();
 
-                // Fly to the marker with animation
+                // Fly to the marker with animation but don't zoom in too much
                 mapRef.current?.flyTo({
                     center: lngLat,
-                    zoom: 8,
+                    zoom: 12, // Less zoomed in than before
                     duration: 1000,
                     essential: true
                 });

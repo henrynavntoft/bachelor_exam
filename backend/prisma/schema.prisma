@@ -21,20 +21,31 @@ enum Role {
 }
 
 model User {
-  id              String               @id @default(uuid())
-  firstName       String
-  lastName        String
-  email           String               @unique
-  hashedPassword  String
-  profilePicture  String?
-  role            Role                 @default(GUEST)
-  hostedEvents    Event[]              @relation("HostEvents")
-  attendingEvents Attendee[] // guests attending events
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  isDeleted       Boolean              @default(false)
-  resetTokens     PasswordResetToken[]
-  messages        Message[]
+  id                 String                   @id @default(uuid())
+  firstName          String
+  lastName           String
+  email              String                   @unique
+  hashedPassword     String
+  profilePicture     String?
+  role               Role                     @default(GUEST)
+  isVerified         Boolean                  @default(false)
+  hostedEvents       Event[]                  @relation("HostEvents")
+  attendingEvents    Attendee[] // guests attending events
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  isDeleted          Boolean                  @default(false)
+  resetTokens        PasswordResetToken[]
+  verificationTokens EmailVerificationToken[]
+  messages           Message[]
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 model PasswordResetToken {

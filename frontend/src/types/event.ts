@@ -1,13 +1,18 @@
 export interface Event {
-    hostId: string;
     id: string;
     title: string;
     description: string;
     date: string;
     location: string;
-    images: string[];
-    attendees?: Array<{
+    hostId: string;
+    images?: string[];
+    attendees?: {
         userId: string;
         eventId: string;
-    }>;
+    }[];
+    host?: {
+        firstName: string;
+        lastName: string;
+        profilePicture?: string;
+    };
 } 

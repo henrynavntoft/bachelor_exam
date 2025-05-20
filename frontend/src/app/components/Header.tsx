@@ -10,10 +10,10 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Menu, Moon, Sun, CircleUserRound } from 'lucide-react';
+} from "@/components/ui/dropdown-menu";
+import { Menu, Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Helper function to get user initials
 const getInitials = (firstName?: string, lastName?: string): string => {
@@ -26,95 +26,114 @@ export default function Header() {
     const { theme, setTheme } = useTheme();
 
     return (
-        <header className="w-full px-6 py-4 flex justify-between items-center">
-            <Link href="/" className="flex-shrink-0">
-                <Image src="/logo.svg" alt="Logo" width={75} height={75} className="hover:opacity-90 transition-opacity" />
-            </Link>
+        <header className="sticky top-0 z-50 w-full bg-background/80 backdrop-blur-sm border-b">
+            <div className="container mx-auto px-4 py-3">
+                <div className="flex justify-between items-center">
+                    <Link href="/" className="flex-shrink-0">
+                        <Image src="/logo.svg" alt="Logo" width={50} height={50} className="hover:opacity-90 transition-opacity" />
+                    </Link>
 
-            <div className="flex items-center gap-4">
-                {user ? (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button className="px-3 py-2 flex items-center gap-3 rounded-full overflow-hidden cursor-pointer">
-                                <Menu strokeWidth={1} size={20} />
-                                <Avatar>
-                                    <AvatarImage src={user.profilePicture || ""} alt={`${user.firstName} ${user.lastName}`} />
-                                    <AvatarFallback className="bg-brand text-brand-foreground">
-                                        {getInitials(user.firstName, user.lastName)}
-                                    </AvatarFallback>
-                                </Avatar>
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuLabel>Hey, {user.firstName}!</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem asChild>
-                                <Link href={user.role === 'ADMIN' ? '/dashboard' : '/profile'} className="cursor-pointer">
-                                    {user.role === 'ADMIN' ? 'Dashboard' : 'Profile'}
-                                </Link>
-                            </DropdownMenuItem>
+                    <div className="flex items-center gap-4">
+                        {user ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="px-3 py-2 flex items-center gap-3 cursor-pointer rounded-md hover:bg-accent">
+                                        <Menu strokeWidth={1} size={20} />
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={user.profilePicture || ""} alt={`${user.firstName} ${user.lastName}`} />
+                                            <AvatarFallback className="bg-brand text-brand-foreground">
+                                                {getInitials(user.firstName, user.lastName)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56">
+                                    <DropdownMenuLabel>
+                                        <div className="font-normal">
+                                            <p className="font-medium">Hi, {user.firstName}!</p>
+                                            <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
+                                        </div>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem asChild>
+                                        <Link href={user.role === 'ADMIN' ? '/admin' : '/profile'} className="cursor-pointer">
+                                            {user.role === 'ADMIN' ? 'Admin Dashboard' : 'Profile'}
+                                        </Link>
+                                    </DropdownMenuItem>
 
-                            <DropdownMenuSeparator />
+                                    <DropdownMenuSeparator />
 
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
-                                <Sun className="h-4 w-4" />
-                                <span>Light</span>
-                                {theme === "light" && <span className="ml-auto text-brand">✓</span>}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2">
-                                <Moon className="h-4 w-4" />
-                                <span>Dark</span>
-                                {theme === "dark" && <span className="ml-auto text-brand">✓</span>}
-                            </DropdownMenuItem>
+                                    <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
+                                        <Sun className="h-4 w-4" />
+                                        <span>Light</span>
+                                        {theme === "light" && <span className="ml-auto text-brand">✓</span>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2">
+                                        <Moon className="h-4 w-4" />
+                                        <span>Dark</span>
+                                        {theme === "dark" && <span className="ml-auto text-brand">✓</span>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer flex items-center gap-2">
+                                        <Monitor className="h-4 w-4" />
+                                        <span>System</span>
+                                        {theme === "system" && <span className="ml-auto text-brand">✓</span>}
+                                    </DropdownMenuItem>
 
-                            <DropdownMenuSeparator />
+                                    <DropdownMenuSeparator />
 
-                            <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
-                                Logout
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button className="px-3 py-2 flex items-center gap-3 overflow-hidden cursor-pointer">
-                                <Menu strokeWidth={1} size={20} />
-                                <Avatar>
-                                    <AvatarFallback className="bg-brand">
-                                        <CircleUserRound strokeWidth={1} size={20} />
-                                    </AvatarFallback>
-                                </Avatar>
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                            <DropdownMenuItem asChild>
-                                <Link href="/login" className="cursor-pointer">
-                                    Login
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href="/signup" className="cursor-pointer">
-                                    Sign up
-                                </Link>
-                            </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive">
+                                        Logout
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="px-3 py-2 flex items-center gap-3 cursor-pointer rounded-md hover:bg-accent">
+                                        <Menu strokeWidth={1} size={20} />
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarFallback className="bg-brand text-brand-foreground">
+                                                ?
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/login" className="cursor-pointer">
+                                            Login
+                                        </Link>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem asChild>
+                                        <Link href="/signup" className="cursor-pointer">
+                                            Sign up
+                                        </Link>
+                                    </DropdownMenuItem>
 
-                            <DropdownMenuSeparator />
+                                    <DropdownMenuSeparator />
 
-                            <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
-                                <Sun className="h-4 w-4" />
-                                <span>Light</span>
-                                {theme === "light" && <span className="ml-auto text-brand">✓</span>}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2">
-                                <Moon className="h-4 w-4" />
-                                <span>Dark</span>
-                                {theme === "dark" && <span className="ml-auto text-brand">✓</span>}
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                )}
+                                    <DropdownMenuLabel className="text-xs text-muted-foreground">Theme</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer flex items-center gap-2">
+                                        <Sun className="h-4 w-4" />
+                                        <span>Light</span>
+                                        {theme === "light" && <span className="ml-auto text-brand">✓</span>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer flex items-center gap-2">
+                                        <Moon className="h-4 w-4" />
+                                        <span>Dark</span>
+                                        {theme === "dark" && <span className="ml-auto text-brand">✓</span>}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer flex items-center gap-2">
+                                        <Monitor className="h-4 w-4" />
+                                        <span>System</span>
+                                        {theme === "system" && <span className="ml-auto text-brand">✓</span>}
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
+                    </div>
+                </div>
             </div>
         </header>
     );

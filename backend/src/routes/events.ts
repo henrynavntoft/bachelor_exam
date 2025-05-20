@@ -7,16 +7,58 @@ const router = Router();
 
 
 //////////////////////////////////////////////////////////////////////////////////
-// GET: Get all events
+// GET: Get all events with pagination
 router.get('/', async (req: Request, res: Response) => {
     try {
+        const limit = parseInt(req.query.limit as string) || 6; // Default to 6 items per page
+        const cursor = req.query.cursor as string | undefined; // Cursor for pagination
+
+        // Get today's date with time set to start of day
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Query parameters for filtering (can be extended later)
+        const where = {
+            isDeleted: false,
+            // Filter out events with dates earlier than today
+            date: {
+                gte: today
+            }
+            // Add more filters as needed
+        };
+
+        // Add cursor condition if provided
+        const skip = cursor ? 1 : 0; // Skip the cursor item if we have one
+        const cursorObj = cursor ? { id: cursor } : undefined;
+
         const events = await prisma.event.findMany({
-            where: { isDeleted: false },
+            where,
+            take: limit,
+            skip,
+            cursor: cursorObj,
+            orderBy: { date: 'asc' }, // Order by date ascending (upcoming events first)
             include: {
+                host: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        profilePicture: true,
+                    },
+                },
                 attendees: true
             }
         });
-        res.status(200).json(events);
+
+        // Get the next cursor
+        let nextCursor: string | undefined = undefined;
+        if (events.length === limit) {
+            nextCursor = events[events.length - 1].id;
+        }
+
+        res.status(200).json({
+            events,
+            nextCursor
+        });
     } catch (error) {
         console.error('Error fetching events:', error);
         res.status(500).json({ message: 'Failed to fetch events' });

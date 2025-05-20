@@ -104,7 +104,7 @@ export default function EventPage() {
 
     if (!event) {
         return (
-            <main className="p-4">
+            <main>
                 <h1 className="text-2xl font-bold">Event not found</h1>
                 <Button
                     variant="ghost"
@@ -122,7 +122,7 @@ export default function EventPage() {
         <main className="flex flex-col gap-4">
             <article className="space-y-4">
                 <section>
-                    <div className="p-6">
+                    <div>
                         <h1 className="text-3xl font-bold mb-4">{event.title}</h1>
                         <div className="w-full">
                             {event.images && event.images.length > 0 ? (
@@ -161,7 +161,7 @@ export default function EventPage() {
                 {/* Information about the event */}
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div className="">
-                        <div className="p-6">
+                        <div>
                             {/* Event metadata with icons */}
                             <div className="flex flex-col space-y-3 mb-6">
                                 <div className="flex items-center">
