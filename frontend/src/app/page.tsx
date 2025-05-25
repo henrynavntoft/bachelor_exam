@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import LoadingSpinner from "./components/LoadingSpinner";
-import Map from "./components/Map";
-import EventGrid from "./components/EventGrid";
-import MapToggle from "./components/MapToggle";
-import MobileMap from "./components/MobileMap";
-import InfiniteLoader from "./components/InfiniteLoader";
+import LoadingSpinner from "./components/global/LoadingSpinner";
+import Map from "./components/home/Map";
+import EventGrid from "./components/home/EventGrid";
+import MapToggle from "./components/home/MapToggle";
+import MobileMap from "./components/home/MobileMap";
+import InfiniteLoader from "./components/global/InfiniteLoader";
 import { useEvents } from "@/hooks/useEvents";
 
 export default function Home() {

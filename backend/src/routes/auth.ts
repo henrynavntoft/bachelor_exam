@@ -6,7 +6,7 @@ import { forgotPasswordSchema, loginSchema, signupSchema } from '../schemas/auth
 import { ZodError, ZodIssue } from 'zod';
 import { prisma } from '../config/prisma';
 import crypto from 'crypto';
-import { Resend } from 'resend';
+import { emailService } from '../services/emailService';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -161,8 +161,6 @@ router.post('/signup', async (req: Request, res, next) => {
             },
         });
 
-        const resend = new Resend(process.env.RESEND_API_KEY);
-
         const verificationUrl = `${process.env.CORS_ORIGINS}/verify-email?token=${token}`;
 
         res.status(201).json({
@@ -170,88 +168,16 @@ router.post('/signup', async (req: Request, res, next) => {
             message: 'Account created. Please check your email to verify your account.'
         });
 
-        resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL!,
-            to: user.email,
-            subject: 'Verify Your Account',
-            html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        .email-container {
-                            max-width: 600px;
-                            margin: 0 auto;
-                            padding: 20px;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                            line-height: 1.6;
-                            color: #333;
-                        }
-                        .header {
-                            text-align: center;
-                            margin-bottom: 30px;
-                        }
-                        .content {
-                            background: #f9f9f9;
-                            padding: 30px;
-                            margin-bottom: 20px;
-                        }
-                        .button {
-                            display: inline-block;
-                            padding: 12px 24px;
-                            background-color: #1A6258;
-                            color: white;
-                            text-decoration: none;
-                            font-weight: 500;
-                            margin: 20px 0;
-                        }
-                        .button:hover {
-                            opacity: 0.9;
-                        }
-                        .footer {
-                            text-align: center;
-                            font-size: 14px;
-                            color: #666;
-                            margin-top: 30px;
-                        }
-                        .divider {
-                            height: 1px;
-                            background-color: #eaeaea;
-                            margin: 20px 0;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="email-container">
-                        <div class="header">
-                            <h1 style="color: #1A6258; margin: 0;">Verify Your Email</h1>
-                        </div>
-                        <div class="content">
-                            <p style="font-size: 14px; color: #666;">Hello ${firstName},</p>
-                            <p style="font-size: 14px; color: #666;">Welcome to Meet & Greet | Culture Connect! To complete your registration, please verify your email address by clicking the button below:</p>
-                            
-                            <div style="text-align: center;">
-                                <a style="text-decoration: none; color: white;" href="${verificationUrl}" class="button">Verify Email</a>
-                            </div>
-                            
-                            <div class="divider"></div>
-                            
-                            <p style="font-size: 14px; color: #666;">
-                                If you did not create an account, you can safely ignore this email. The link will expire in 24 hours.
-                            </p>
-                        </div>
-                        <div class="footer">
-                            <p>This is an automated message, please do not reply to this email.</p>
-                            <p style="color: #1A6258;">© 2024 Meet & Greet | Culture Connect. All rights reserved.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `,
-        }).then(() => {
-            console.log(`✅ Verification email sent to ${user.email}`);
-        }).catch((err) => {
-            console.error(`❌ Failed to send verification email to ${user.email}:`, err);
+        // Use emailService instead of direct Resend usage
+        emailService.sendVerificationEmail(user.email, {
+            firstName: user.firstName,
+            verificationUrl
+        }).then(result => {
+            if (result.success) {
+                console.log(`✅ Verification email sent to ${user.email}`);
+            } else {
+                console.error(`❌ Failed to send verification email to ${user.email}:`, result.error);
+            }
         });
     } catch (err) {
         next(err as Error);
@@ -333,93 +259,20 @@ router.post('/resend-verification', async (req: Request, res: Response, next: Ne
             },
         });
 
-        const resend = new Resend(process.env.RESEND_API_KEY);
         const verificationUrl = `${process.env.CORS_ORIGINS}/verify-email?token=${token}`;
 
         res.json({ message: 'If an account exists with this email, a new verification link will be sent.' });
 
-        resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL!,
-            to: user.email,
-            subject: 'Verify Your Account',
-            html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        .email-container {
-                            max-width: 600px;
-                            margin: 0 auto;
-                            padding: 20px;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                            line-height: 1.6;
-                            color: #333;
-                        }
-                        .header {
-                            text-align: center;
-                            margin-bottom: 30px;
-                        }
-                        .content {
-                            background: #f9f9f9;
-                            padding: 30px;
-                            margin-bottom: 20px;
-                        }
-                        .button {
-                            display: inline-block;
-                            padding: 12px 24px;
-                            background-color: #1A6258;
-                            color: white;
-                            text-decoration: none;
-                            font-weight: 500;
-                            margin: 20px 0;
-                        }
-                        .button:hover {
-                            opacity: 0.9;
-                        }
-                        .footer {
-                            text-align: center;
-                            font-size: 14px;
-                            color: #666;
-                            margin-top: 30px;
-                        }
-                        .divider {
-                            height: 1px;
-                            background-color: #eaeaea;
-                            margin: 20px 0;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="email-container">
-                        <div class="header">
-                            <h1 style="color: #1A6258; margin: 0;">Verify Your Email</h1>
-                        </div>
-                        <div class="content">
-                            <p style="font-size: 14px; color: #666;">Hello ${user.firstName},</p>
-                            <p style="font-size: 14px; color: #666;">You requested a new verification link. To complete your registration, please verify your email address by clicking the button below:</p>
-                            
-                            <div style="text-align: center;">
-                                <a style="text-decoration: none; color: white;" href="${verificationUrl}" class="button">Verify Email</a>
-                            </div>
-                            
-                            <div class="divider"></div>
-                            
-                            <p style="font-size: 14px; color: #666;">
-                                If you did not create an account or request this email, you can safely ignore it. The link will expire in 24 hours.
-                            </p>
-                        </div>
-                        <div class="footer">
-                            <p>This is an automated message, please do not reply to this email.</p>
-                            <p style="color: #1A6258;">© 2024 Meet & Greet | Culture Connect. All rights reserved.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `,
-        }).then(() => {
-            console.log(`✅ Verification email resent to ${user.email}`);
-        }).catch((err) => {
-            console.error(`❌ Failed to resend verification email to ${user.email}:`, err);
+        // Use emailService instead of direct Resend usage
+        emailService.sendVerificationEmail(user.email, {
+            firstName: user.firstName,
+            verificationUrl
+        }).then(result => {
+            if (result.success) {
+                console.log(`✅ Verification email resent to ${user.email}`);
+            } else {
+                console.error(`❌ Failed to resend verification email to ${user.email}:`, result.error);
+            }
         });
     } catch (err) {
         next(err as Error);
@@ -465,94 +318,20 @@ router.post('/forgot-password', async (req: Request, res: Response, next: NextFu
             },
         });
 
-        const resend = new Resend(process.env.RESEND_API_KEY);
-
         const resetUrl = `${process.env.CORS_ORIGINS}/reset-password?token=${token}`;
 
         res.json({ message: 'If an account exists with this email, you will receive password reset instructions.' });
 
-        resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL!,
-            to: user.email,
-            subject: 'Password Reset Request',
-            html: `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        .email-container {
-                            max-width: 600px;
-                            margin: 0 auto;
-                            padding: 20px;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                            line-height: 1.6;
-                            color: #333;
-                        }
-                        .header {
-                            text-align: center;
-                            margin-bottom: 30px;
-                        }
-                        .content {
-                            background: #f9f9f9;
-                            padding: 30px;
-                            margin-bottom: 20px;
-                        }
-                        .button {
-                            display: inline-block;
-                            padding: 12px 24px;
-                            background-color: #1A6258;
-                            color: white;
-                            text-decoration: none;
-                            font-weight: 500;
-                            margin: 20px 0;
-                        }
-                        .button:hover {
-                            opacity: 0.9;
-                        }
-                        .footer {
-                            text-align: center;
-                            font-size: 14px;
-                            color: #666;
-                            margin-top: 30px;
-                        }
-                        .divider {
-                            height: 1px;
-                            background-color: #eaeaea;
-                            margin: 20px 0;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="email-container">
-                        <div class="header">
-                            <h1 style="color: #1A6258; margin: 0;">Password Reset Request</h1>
-                        </div>
-                        <div class="content">
-                            <p style="font-size: 14px; color: #666;">Hello,</p>
-                            <p style="font-size: 14px; color: #666;">We received a request to reset your password. To proceed with the password reset, click the button below:</p>
-                            
-                            <div style="text-align: center;">
-                                <a style="text-decoration: none; color: white;" href="${resetUrl}" class="button">Reset Password</a>
-                            </div>
-                            
-                            <div class="divider"></div>
-                            
-                            <p style="font-size: 14px; color: #666;">
-                                If you didn't request this password reset, you can safely ignore this email. The link will expire in 1 hour.
-                            </p>
-                        </div>
-                        <div class="footer">
-                            <p>This is an automated message, please do not reply to this email.</p>
-                            <p style="color: #1A6258;">© 2024 Meet & Greet | Culture Connect. All rights reserved.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `,
-        }).then(() => {
-            console.log(`✅ Password reset email sent to ${user.email}`);
-        }).catch((err) => {
-            console.error(`❌ Failed to send password reset email to ${user.email}:`, err);
+        // Use emailService instead of direct Resend usage
+        emailService.sendPasswordResetEmail(user.email, {
+            firstName: user.firstName,
+            resetUrl
+        }).then(result => {
+            if (result.success) {
+                console.log(`✅ Password reset email sent to ${user.email}`);
+            } else {
+                console.error(`❌ Failed to send password reset email to ${user.email}:`, result.error);
+            }
         });
     } catch (err) {
         next(err as Error);

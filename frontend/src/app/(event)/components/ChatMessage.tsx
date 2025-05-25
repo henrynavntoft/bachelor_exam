@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { UserAvatar } from "@/components/users/UserAvatar";
+import { UserAvatar } from "@/app/(user)/components/UserAvatar";
 
 interface ChatMessageProps {
     id: string;

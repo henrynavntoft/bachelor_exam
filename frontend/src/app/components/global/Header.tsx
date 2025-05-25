@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Menu, Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { UserAvatar } from '@/components/users/UserAvatar';
+import { UserAvatar } from '@/app/(user)/components/UserAvatar';
 
 export default function Header() {
     const { user, logout } = useAuth();

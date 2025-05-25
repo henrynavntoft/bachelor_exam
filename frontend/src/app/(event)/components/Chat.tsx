@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, X, Send, AlertTriangle, CheckCircle2, ArrowDown } from 'lucide-react';
-import { ChatMessage } from './ChatMessage';
+import { ChatMessage } from '@/app/(event)/components/ChatMessage';
 
 interface ChatProps {
     eventId: string;

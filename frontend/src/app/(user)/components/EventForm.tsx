@@ -5,11 +5,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { FileInput } from "@/app/components/FileInput";
+import { FileInput } from "@/app/(event)/components/FileInput";
 import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { MapboxLocationInput } from "./MapboxLocationInput";
+import { MapboxLocationInput } from "@/app/components/home/MapboxLocationInput";
 
 const eventSchema = z.object({
     title: z.string().min(1, 'Title is required'),

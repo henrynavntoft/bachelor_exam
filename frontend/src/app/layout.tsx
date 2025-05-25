@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import QueryProvider from "./components/QueryProvider";
-import AuthProvider from "./components/AuthProvider";
-import { ThemeProvider } from "./components/ThemeProvider";
-import ClientOnly from "./components/ClientOnly";
-import Header from "./components/Header";
+import QueryProvider from "./components/global/QueryProvider";
+import AuthProvider from "./components/global/AuthProvider";
+import { ThemeProvider } from "./components/global/ThemeProvider";
+import ClientOnly from "./components/global/ClientOnly";
+import Header from "./components/global/Header";
 import { Toaster } from "sonner";
-import Footer from "./components/Footer";
+import Footer from "./components/global/Footer";
 import Script from "next/script";
 
 const geistSans = Geist({

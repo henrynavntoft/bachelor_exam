@@ -18,8 +18,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import LoadingSpinner from '@/app/components/LoadingSpinner';
-import Chat from '@/components/chat/Chat';
+import LoadingSpinner from '@/app/components/global/LoadingSpinner';
+import Chat from '@/app/(event)/components/Chat';
 
 interface EventDetailProps {
     event: Event;

@@ -3,8 +3,8 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { AdminDataProvider } from '@/components/admin/AdminDataProvider';
-import { AdminDashboard } from '@/components/admin/AdminDashboard';
+import { AdminDataProvider } from '@/app/(admin)/components/AdminDataProvider';
+import { AdminDashboard } from '@/app/(admin)/components/AdminDashboard';
 
 export default function DashboardPage() {
     const { user, isAuthenticated, isAdmin, isLoading } = useAuth();

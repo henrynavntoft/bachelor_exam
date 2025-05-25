@@ -4,7 +4,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FileInput } from "@/app/components/FileInput";
+import { FileInput } from "@/app/(event)/components/FileInput";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useState } from "react";

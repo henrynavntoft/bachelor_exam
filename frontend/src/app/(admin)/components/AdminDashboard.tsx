@@ -2,8 +2,8 @@
 
 import { User } from '@/types/user';
 import { Event } from '@/types/event';
-import { UserCard } from '@/components/users/UserCard';
-import { EventCard } from '@/components/events/EventCard';
+import { UserCard } from '@/app/(user)/components/UserCard';
+import { EventCard } from '@/app/(event)/components/EventCard';
 import Image from 'next/image';
 
 interface AdminDashboardProps {

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Mail, KeyRound, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { User } from '@/types/user';
-import { ProfileForm } from '@/app/components/ProfileForm';
+import { ProfileForm } from '@/app/(user)/components/ProfileForm';
 import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
 import { toast } from 'sonner';

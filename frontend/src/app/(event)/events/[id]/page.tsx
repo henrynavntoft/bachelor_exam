@@ -4,13 +4,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import axiosInstance from "@/lib/axios";
 import { routes } from "@/lib/routes";
-import LoadingSpinner from "@/app/components/LoadingSpinner";
+import LoadingSpinner from "@/app/components/global/LoadingSpinner";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
-import { EventDetail } from "@/components/events/EventDetail";
+import { EventDetail } from "@/app/(event)/components/EventDetail";
 import { Event } from "@/types/event";
 
 export default function EventPage() {

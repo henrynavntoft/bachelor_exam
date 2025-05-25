@@ -3,17 +3,17 @@
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import LoadingSpinner from '../../components/global/LoadingSpinner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import EventCard from "@/app/components/Card";
-import { EventForm } from '@/app/components/EventForm';
-import { HostEventCard } from '@/app/components/HostEventCard';
+import EventCard from "@/app/components/home/Card";
+import { EventForm } from '@/app/(user)/components/EventForm';
+import { HostEventCard } from '@/app/(user)/components/HostEventCard';
 import { Event } from '@/types/event';
-import { ProfileSection } from '@/components/users/ProfileSection';
+import { ProfileSection } from '@/app/(user)/components/ProfileSection';
 import {
     AlertDialog,
     AlertDialogContent,
