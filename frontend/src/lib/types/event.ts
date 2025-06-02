@@ -14,6 +14,10 @@ export interface Event {
     createdAt?: string; // Added from Prisma
     updatedAt?: string; // Added from Prisma
 
+    // New fields from schema
+    pricePerPerson?: number | null;
+    eventType?: string; // Or 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SPECIAL';
+
     // Relations (shapes depend on how much detail you fetch)
     host?: User; // Typically, you'd fetch host details
     attendees?: Attendee[]; // List of attendee records

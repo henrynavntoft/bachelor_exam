@@ -7,6 +7,7 @@
 generator client {
   provider = "prisma-client-js"
   seed     = "seed.ts"
+  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -18,6 +19,13 @@ enum Role {
   GUEST
   HOST
   ADMIN
+}
+
+enum EventType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SPECIAL
 }
 
 model User {
@@ -37,6 +45,8 @@ model User {
   resetTokens        PasswordResetToken[]
   verificationTokens EmailVerificationToken[]
   messages           Message[]
+  ratingsReceived    Rating[]                 @relation("RatingsReceived")
+  ratingsGiven       Rating[]                 @relation("RatingsGiven")
 }
 
 model EmailVerificationToken {
@@ -57,20 +67,35 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 }
 
+model Rating {
+  id          String   @id @default(uuid())
+  rating      Int // Should be validated in application logic to be between 1-10
+  comment     String?
+  ratedUserId String
+  ratedUser   User     @relation("RatingsReceived", fields: [ratedUserId], references: [id])
+  raterUserId String
+  raterUser   User     @relation("RatingsGiven", fields: [raterUserId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([ratedUserId, raterUserId]) // A user can only rate another user once
+}
+
 model Event {
-  id          String     @id @default(uuid())
-  title       String
-  description String
-  images      String[]
-  date        DateTime
-  location    String
-  hostId      String
-  host        User       @relation("HostEvents", fields: [hostId], references: [id])
-  attendees   Attendee[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  isDeleted   Boolean    @default(false)
-  messages    Message[]
+  id             String     @id @default(uuid())
+  title          String
+  description    String
+  images         String[]
+  date           DateTime
+  location       String
+  pricePerPerson Float? // Optional price per person
+  eventType      EventType  @default(SPECIAL) // Type of event (e.g., BREAKFAST, LUNCH, DINNER, SPECIAL)
+  hostId         String
+  host           User       @relation("HostEvents", fields: [hostId], references: [id])
+  attendees      Attendee[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  isDeleted      Boolean    @default(false)
+  messages       Message[]
 }
 
 model Attendee {

@@ -17,6 +17,8 @@ interface EventFormData {
     location: string;
     newImages?: File[];
     images?: string[];
+    pricePerPerson?: number | null;
+    eventType?: string;
     _imagesToDelete?: string[];
 }
 
@@ -65,7 +67,9 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
                     description: data.description,
                     date: new Date(data.date),
                     location: data.location,
-                    hostId: user.id // Ensure hostId is included
+                    hostId: user.id, // Ensure hostId is included
+                    pricePerPerson: data.pricePerPerson,
+                    eventType: data.eventType,
                 },
                 { withCredentials: true }
             );
@@ -151,6 +155,8 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
                     date: new Date(data.date),
                     location: data.location,
                     images: [...(data.images || []), ...uploadedUrls],
+                    pricePerPerson: data.pricePerPerson,
+                    eventType: data.eventType,
                 },
                 { withCredentials: true }
             );

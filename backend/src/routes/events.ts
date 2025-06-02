@@ -3,6 +3,7 @@ import { ZodError, ZodIssue } from 'zod';
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
+import { EventType } from '@prisma/client';
 const router = Router();
 
 
@@ -114,14 +115,23 @@ router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Res
         }
         throw err;
     }
-    const { title, description, images, date, location } = body;
+    const { title, description, images, date, location, pricePerPerson, eventType } = body;
     try {
         if (!req.user) {
             res.status(401).json({ message: 'Unauthorized' });
             return;
         }
         const event = await prisma.event.create({
-            data: { title, description, images, date: new Date(date), location, hostId: req.user.userId },
+            data: {
+                title,
+                description,
+                images,
+                date: new Date(date),
+                location,
+                hostId: req.user.userId,
+                pricePerPerson,
+                eventType
+            },
         });
         res.status(201).json(event);
     } catch (error) {
@@ -162,7 +172,7 @@ router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest,
         }
         throw err;
     }
-    const { title, description, images, date, location } = body;
+    const { title, description, images, date, location, pricePerPerson, eventType } = body;
 
     try {
         // REDUNDANT FETCH REMOVED:
@@ -177,14 +187,17 @@ router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest,
             images?: string[];
             date?: Date;
             location?: string;
+            pricePerPerson?: number;
+            eventType?: EventType;
         } = {};
         // Only add fields if they are present in the validated body (handle potential undefined/null based on schema)
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
-        // Check your schema for images - allow null or just array?
         if (images !== undefined) updateData.images = images;
         if (date !== undefined) updateData.date = new Date(date); // Ensure date is handled consistently
         if (location !== undefined) updateData.location = location;
+        if (pricePerPerson !== undefined) updateData.pricePerPerson = pricePerPerson;
+        if (eventType !== undefined) updateData.eventType = eventType;
 
 
         // Add a check if updateData is empty? If the body was empty {} and schema allows it.

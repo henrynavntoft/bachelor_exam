@@ -23,7 +23,7 @@ import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
 import { toast } from 'sonner';
 import { AxiosError } from 'axios';
-import { Calendar } from 'lucide-react';
+import { Calendar, MapPin, Wallet, CookingPot } from 'lucide-react';
 import { format } from "date-fns";
 import { Role } from '@/lib/types/role';
 
@@ -140,10 +140,10 @@ export function EventCard({
                         ))}
                     </div>
                 )}
-                <div>
-                    <h3 className="text-lg font-semibold mb-1">{event.title}</h3>
+                <section className="flex flex-col gap-2">
+                    <h3 className="text-lg font-semibold">{event.title}</h3>
 
-                    <div className="flex items-center text-muted-foreground text-sm mb-2">
+                    <div className="flex items-center text-muted-foreground text-sm">
                         <Calendar className="h-4 w-4 mr-2" />
                         {event?.date ?
                             format(new Date(event.date), 'MMM dd, yyyy, p') :
@@ -151,10 +151,32 @@ export function EventCard({
                         }
                     </div>
 
-                    {showLocation && event.location && (
-                        <p className="text-sm text-muted-foreground mb-2">{event.location}</p>
-                    )}
-                </div>
+                    <div className="flex items-center text-muted-foreground text-sm">
+                        <MapPin className="h-4 w-4 mr-2" />
+                        {showLocation && event.location && (
+                            <p className="text-sm text-muted-foreground">{event.location}</p>
+                        )}
+                    </div>
+
+                    <div className="flex items-center text-muted-foreground text-sm">
+                        <CookingPot className="h-4 w-4 mr-2" />
+                        {event.eventType && (
+                            <p className="text-sm text-muted-foreground">
+                                Type: {event.eventType.charAt(0).toUpperCase() + event.eventType.slice(1).toLowerCase()}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex items-center text-muted-foreground text-sm">
+                        <Wallet className="h-4 w-4 mr-2" />
+                        {event.pricePerPerson !== null && event.pricePerPerson !== undefined && (
+                            <p className="text-sm text-muted-foreground mb-2">
+                                Price: {event.pricePerPerson > 0 ? `${Math.round(event.pricePerPerson)} DKK` : 'Free'}
+                            </p>
+                        )}
+                    </div>
+
+                </section>
                 {(canEdit || showAdminDelete || showHostDelete || (showAttendControls && isGuest)) && (
                     <CardFooter className="flex flex-col sm:flex-row items-center gap-2 p-0">
                         {showAttendControls && isGuest && (

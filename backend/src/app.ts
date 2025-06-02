@@ -6,6 +6,7 @@ import userRoutes from './routes/users';
 import eventRoutes from './routes/events';
 import authRoutes from './routes/auth';
 import uploadRoute from './routes/upload';
+import ratingsRouter from './routes/ratings';
 import { authLimiter, generalLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import { securityMiddleware } from './middleware/headerMiddleware';
@@ -35,6 +36,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/upload', uploadRoute);
+app.use('/api', ratingsRouter);
 
 app.use((req: Request, res: Response) => {
     res.status(404).json({ error: 'Not Found' });

@@ -10,6 +10,10 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { MapboxLocationInput } from "@/app/components/home/MapboxLocationInput";
 import { eventSchema, EventFormData, ExtendedEventFormData } from "@/lib/schemas/event.schemas";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Define EventType enum values for Select component
+const eventTypes = ["BREAKFAST", "LUNCH", "DINNER", "SPECIAL"] as const;
 
 interface EventFormProps {
     initialData?: Partial<EventFormData> & { id?: string };
@@ -42,6 +46,8 @@ export function EventForm({
                 ? new Date(initialData.date).toISOString().slice(0, 16) // Format as YYYY-MM-DDThh:mm
                 : '',
             images: initialData?.images || [],
+            pricePerPerson: initialData?.pricePerPerson || null,
+            eventType: initialData?.eventType || undefined,
         },
     });
 
@@ -171,6 +177,51 @@ export function EventForm({
                                     maxFiles={5}
                                 />
                             </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="pricePerPerson"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Price Per Person</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="50"
+                                    {...field}
+                                    value={field.value === null || field.value === undefined ? '' : field.value}
+                                    onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="eventType"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Event Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select an event type" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {eventTypes.map(type => (
+                                        <SelectItem key={type} value={type}>
+                                            {type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                         </FormItem>
                     )}

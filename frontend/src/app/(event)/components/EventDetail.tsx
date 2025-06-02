@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Users, MessageCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, MessageCircle, Wallet, CookingPot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Event } from '@/lib/types/event';
 import {
@@ -90,9 +90,9 @@ export function EventDetail({
             </section>
 
             {/* Event metadata with icons */}
-            <section className="grid grid-cols-1 gap-4">
+            <section className="grid grid-cols-1 gap-4 mb-4">
                 <div>
-                    <div className="flex flex-col space-y-3 mb-2">
+                    <div className="flex flex-col space-y-3">
                         <div className="flex items-center">
                             <Calendar className="h-5 w-5 mr-3 text-brand" />
                             <p>{format(new Date(event.date), "EEEE, MMMM dd, yyyy 'at' h:mm a")}</p>
@@ -105,6 +105,20 @@ export function EventDetail({
                             <Users className="h-5 w-5 mr-3 text-brand" />
                             <p>{event.attendees?.length || 0} attending</p>
                         </div>
+                        {/* Display Event Type */}
+                        {event.eventType && (
+                            <div className="flex items-center">
+                                <CookingPot className="h-5 w-5 mr-3 text-brand" />
+                                <p>{event.eventType.charAt(0).toUpperCase() + event.eventType.slice(1).toLowerCase()}</p>
+                            </div>
+                        )}
+                        {/* Display Price Per Person */}
+                        {event.pricePerPerson !== null && event.pricePerPerson !== undefined && (
+                            <div className="flex items-center">
+                                <Wallet className="h-5 w-5 mr-3 text-brand" />
+                                <p>{event.pricePerPerson > 0 ? `${Math.round(event.pricePerPerson)} DKK per person` : 'Free'}</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Host information if available */}
