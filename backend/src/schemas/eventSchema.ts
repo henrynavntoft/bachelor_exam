@@ -11,13 +11,15 @@ export const createEventSchema = z.object({
     images: z.array(z.string().url({ message: 'Each image must be a valid URL' })).optional(),
     date: z.coerce.date({ invalid_type_error: 'Invalid date' }),
     location: z.string().min(1, { message: 'Location is required' }),
-    pricePerPerson: z.number().positive({ message: 'Price must be a positive number' }).optional(),
+    pricePerPerson: z.coerce.number().positive({ message: "Price must be a positive number" }).optional().nullable(),
     eventType: eventTypeEnum,
+    capacity: z.number().int().positive({ message: "Capacity must be a positive integer" }).optional().nullable(),
 });
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
 // Schema for updating an event (all fields optional)
-export const updateEventSchema = createEventSchema.partial();
+export const updateEventSchema = createEventSchema.partial().extend({
+});
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
 // Schema for route params

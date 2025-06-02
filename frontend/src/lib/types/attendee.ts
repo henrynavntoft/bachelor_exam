@@ -5,6 +5,7 @@ export interface Attendee {
     id: string;
     userId: string;
     eventId: string;
+    quantity: number;
     createdAt?: string; // Dates as strings for frontend
 
     // Optional: Include full User/Event objects if your API returns them nested

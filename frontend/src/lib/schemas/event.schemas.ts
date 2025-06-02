@@ -24,6 +24,7 @@ export const eventSchema = z.object({
     location: z.string().min(1, 'Location is required'),
     pricePerPerson: z.coerce.number().positive({ message: "Price must be a positive number" }).optional().nullable(), // Added pricePerPerson
     eventType: z.enum(eventTypes, { required_error: 'Event type is required' }), // Added eventType
+    capacity: z.coerce.number().int().positive({ message: "Capacity must be a positive integer" }).optional().nullable(), // Added capacity field
     images: z.array(z.string()).optional(), // For existing image URLs
     newImages: z.array(z.instanceof(File))
         .optional()

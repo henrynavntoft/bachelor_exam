@@ -17,6 +17,7 @@ export interface Event {
     // New fields from schema
     pricePerPerson?: number | null;
     eventType?: string; // Or 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SPECIAL';
+    capacity?: number | null; // Added capacity
 
     // Relations (shapes depend on how much detail you fetch)
     host?: User; // Typically, you'd fetch host details

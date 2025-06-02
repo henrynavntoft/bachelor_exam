@@ -1,7 +1,9 @@
 import { createEventSchema, updateEventSchema, eventIdParamSchema, CreateEventInput, UpdateEventInput, EventIdParam } from '../schemas/eventSchema';
+import { attendEventSchema, AttendEventInput } from '../schemas/attendeeSchema';
 import { ZodError, ZodIssue } from 'zod';
 import { Router, Request, Response } from 'express';
 import { prisma } from '../config/prisma';
+import { Prisma } from '@prisma/client';
 import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { EventType } from '@prisma/client';
 const router = Router();
@@ -115,7 +117,7 @@ router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Res
         }
         throw err;
     }
-    const { title, description, images, date, location, pricePerPerson, eventType } = body;
+    const { title, description, images, date, location, pricePerPerson, eventType, capacity } = body;
     try {
         if (!req.user) {
             res.status(401).json({ message: 'Unauthorized' });
@@ -130,7 +132,8 @@ router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Res
                 location,
                 hostId: req.user.userId,
                 pricePerPerson,
-                eventType
+                eventType,
+                capacity
             },
         });
         res.status(201).json(event);
@@ -172,7 +175,7 @@ router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest,
         }
         throw err;
     }
-    const { title, description, images, date, location, pricePerPerson, eventType } = body;
+    const { title, description, images, date, location, pricePerPerson, eventType, capacity } = body;
 
     try {
         // REDUNDANT FETCH REMOVED:
@@ -181,31 +184,22 @@ router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest,
         // authorize(['EVENT_OWNER']) ensures the event exists and req.user is the owner (or admin)
 
         // Build partial update payload
-        const updateData: {
-            title?: string;
-            description?: string;
-            images?: string[];
-            date?: Date;
-            location?: string;
-            pricePerPerson?: number;
-            eventType?: EventType;
-        } = {};
-        // Only add fields if they are present in the validated body (handle potential undefined/null based on schema)
+        const updateData: Prisma.EventUpdateInput = {};
+
+        // Only add fields if they are present in the validated body
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
-        if (images !== undefined) updateData.images = images;
-        if (date !== undefined) updateData.date = new Date(date); // Ensure date is handled consistently
+        if (images !== undefined) updateData.images = { set: images };
+        if (date !== undefined) updateData.date = new Date(date);
         if (location !== undefined) updateData.location = location;
         if (pricePerPerson !== undefined) updateData.pricePerPerson = pricePerPerson;
-        if (eventType !== undefined) updateData.eventType = eventType;
+        if (eventType !== undefined) updateData.eventType = eventType as EventType;
+        if (capacity !== undefined) updateData.capacity = capacity;
 
-
-        // Add a check if updateData is empty? If the body was empty {} and schema allows it.
         if (Object.keys(updateData).length === 0) {
             res.status(400).json({ message: 'No update data provided.' });
             return;
         }
-
 
         await prisma.event.update({
             where: { id },
@@ -260,26 +254,70 @@ router.delete('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedReque
 
 // RSVP to an event
 router.post('/:id/attend', authorize(['GUEST']), async (req: AuthenticatedRequest, res: Response) => {
+    // Validate ID param - already done by authorize if EVENT_OWNER/SELF, but good to have for GUEST
+    let eventParams: EventIdParam;
     try {
-        const eventId = req.params.id;
-        const userId = req.user?.userId;
-
-        if (!userId) {
-            res.status(401).json({ message: 'Unauthorized' });
+        eventParams = eventIdParamSchema.parse(req.params);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: `Invalid event ID: ${errorMessage}` });
             return;
         }
+        throw err;
+    }
+    const { id: eventId } = eventParams;
 
-        // Check if event exists
+    // Validate body for quantity
+    let body: AttendEventInput;
+    try {
+        body = attendEventSchema.parse(req.body || {}); // Parse req.body, ensure object if empty for default quantity
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: `Invalid input: ${errorMessage}` });
+            return;
+        }
+        throw err;
+    }
+    const { quantity } = body;
+
+    const userId = req.user?.userId;
+
+    if (!userId) {
+        res.status(401).json({ message: 'Unauthorized' });
+        return;
+    }
+
+    try {
+        // Check if event exists and get its capacity and current total quantity of attendees
         const event = await prisma.event.findUnique({
-            where: { id: eventId },
+            where: { id: eventId, isDeleted: false }, // Ensure event is not deleted
+            include: {
+                attendees: { // Include attendees to calculate current count
+                    select: { quantity: true }
+                }
+            }
         });
 
         if (!event) {
-            res.status(404).json({ message: 'Event not found' });
+            res.status(404).json({ message: 'Event not found or has been deleted.' });
             return;
         }
 
-        // Check if user has already RSVPed
+        // Check capacity
+        if (event.capacity !== null && event.capacity !== undefined) { // If capacity is set
+            const currentTotalQuantity = event.attendees.reduce((sum, att) => sum + att.quantity, 0);
+            if (currentTotalQuantity + quantity > event.capacity) {
+                const spotsLeft = event.capacity - currentTotalQuantity;
+                res.status(400).json({ message: `Not enough spots available. Only ${spotsLeft} spot(s) left.` });
+                return;
+            }
+        }
+
+        // Check if user has already RSVPed (unique constraint is on (userId, eventId) for Attendee model implicitly)
+        // If a user can RSVP multiple times with different quantities, this check needs adjustment.
+        // Assuming a user has only ONE Attendee record per event, which holds their total quantity.
         const existingRSVP = await prisma.attendee.findFirst({
             where: {
                 userId,
@@ -288,7 +326,9 @@ router.post('/:id/attend', authorize(['GUEST']), async (req: AuthenticatedReques
         });
 
         if (existingRSVP) {
-            res.status(400).json({ message: 'You have already RSVPed to this event' });
+            // If user wants to update quantity, they should cancel and re-RSVP, or we need an update RSVP endpoint.
+            // For now, prevent new RSVP if one exists.
+            res.status(400).json({ message: 'You have already RSVPed to this event. Please cancel your existing RSVP to change quantity.' });
             return;
         }
 
@@ -297,6 +337,7 @@ router.post('/:id/attend', authorize(['GUEST']), async (req: AuthenticatedReques
             data: {
                 userId,
                 eventId,
+                quantity, // Store the quantity
             },
         });
 

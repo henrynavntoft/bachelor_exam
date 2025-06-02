@@ -6,6 +6,7 @@ export const createRatingSchema = z.object({
         .min(1, { message: 'Rating must be at least 1.' })
         .max(10, { message: 'Rating cannot exceed 10.' }),
     comment: z.string().optional(),
+    eventId: z.string().uuid({ message: 'Invalid event ID format for rating.' }),
 });
 export type CreateRatingInput = z.infer<typeof createRatingSchema>;
 

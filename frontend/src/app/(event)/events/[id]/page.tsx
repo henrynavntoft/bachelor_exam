@@ -33,6 +33,16 @@ export default function EventPage() {
         (attendee) => attendee.userId === user?.id
     );
 
+    // Get the quantity if the user is attending
+    let rsvpQuantity: number | undefined = undefined;
+    if (isUserAttending && user && event?.attendees) {
+        const userAttendee = event.attendees.find(att => att.userId === user.id);
+        // Ensure userAttendee and its quantity property exist
+        if (userAttendee && typeof userAttendee.quantity === 'number') {
+            rsvpQuantity = userAttendee.quantity;
+        }
+    }
+
     const handleAttend = async () => {
         if (!user) {
             toast.error("Please log in to attend events");
@@ -54,6 +64,11 @@ export default function EventPage() {
             await queryClient.invalidateQueries({ queryKey: ["event", eventId] });
             await queryClient.invalidateQueries({ queryKey: ["events"] });
             await queryClient.invalidateQueries({ queryKey: ["rsvpedEvents"] });
+            // Add invalidation for the specific attendance query key used by EventCard
+            if (user?.id) { // Ensure user.id is available
+                // Use refetchQueries for a more direct update of EventCard's attendance state
+                await queryClient.refetchQueries({ queryKey: ["attendance", eventId, user.id], exact: true });
+            }
         } catch (error) {
             console.error('Error updating attendance:', error);
             if (error instanceof AxiosError) {
@@ -97,6 +112,7 @@ export default function EventPage() {
             <EventDetail
                 event={event}
                 isUserAttending={isUserAttending}
+                currentUserRsvpQuantity={rsvpQuantity}
                 onAttend={handleAttend}
                 showActions={true}
             />

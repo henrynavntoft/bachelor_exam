@@ -48,6 +48,14 @@ export function HostDashboard({
 }: HostDashboardProps) {
     const selectedEventData = events.find(e => e.id === selectedEventId);
 
+    // Prepare initialData for the form with corrected eventType
+    const formInitialData = selectedEventData ? {
+        ...selectedEventData,
+        eventType: selectedEventData.eventType as "BREAKFAST" | "LUNCH" | "DINNER" | "SPECIAL" | undefined,
+        // Ensure date is in 'YYYY-MM-DDTHH:mm' format if needed by EventForm's defaultValues logic
+        date: selectedEventData.date ? new Date(selectedEventData.date).toISOString().slice(0, 16) : undefined,
+    } : undefined;
+
     return (
         <article className="">
             <h1 className="text-2xl font-bold mb-4 text-center">Host Dashboard</h1>
@@ -94,20 +102,22 @@ export function HostDashboard({
             {/* Edit event modal */}
             {selectedEventId && selectedEventData && (
                 <AlertDialog open={!!selectedEventId} onOpenChange={(open) => !open && setSelectedEventId(null)}>
-                    <AlertDialogContent className="max-w-3xl">
+                    <AlertDialogContent className="sm:max-w-2xl">
                         <AlertDialogHeader>
                             <AlertDialogTitle>Edit Event</AlertDialogTitle>
                             <AlertDialogDescription>
                                 Make changes to your event here.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
-                        <EventForm
-                            initialData={selectedEventData}
-                            onSubmit={handleEditSubmit}
-                            onCancel={() => setSelectedEventId(null)}
-                            existingImages={selectedEventData.images || []}
-                            isEditing
-                        />
+                        <div className="max-h-[75vh] overflow-y-auto p-1">
+                            <EventForm
+                                initialData={formInitialData}
+                                onSubmit={handleEditSubmit}
+                                onCancel={() => setSelectedEventId(null)}
+                                existingImages={selectedEventData.images || []}
+                                isEditing
+                            />
+                        </div>
                     </AlertDialogContent>
                 </AlertDialog>
             )}

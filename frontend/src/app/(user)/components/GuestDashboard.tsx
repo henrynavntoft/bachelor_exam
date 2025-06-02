@@ -4,6 +4,8 @@ import { EventCard } from '@/app/(event)/components/EventCard';
 import { Event } from '@/lib/types/event';
 import { User } from '@/lib/types/user';
 import LoadingSpinner from '@/app/components/global/LoadingSpinner';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 interface GuestDashboardProps {
     currentUser: User | null;
@@ -37,7 +39,12 @@ export function GuestDashboard({
                         ))}
                     </div>
                 ) : (
-                    <p className="text-center text-muted-foreground">You haven&apos;t RSVPed to any events yet.</p>
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="text-center text-muted-foreground">You haven&apos;t RSVPed to any events yet.</p>
+                        <Button asChild>
+                            <Link href={'/'}>Browse events</Link>
+                        </Button>
+                    </div>
                 )}
             </div>
         </article>

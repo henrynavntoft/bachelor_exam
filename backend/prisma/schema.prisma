@@ -75,9 +75,11 @@ model Rating {
   ratedUser   User     @relation("RatingsReceived", fields: [ratedUserId], references: [id])
   raterUserId String
   raterUser   User     @relation("RatingsGiven", fields: [raterUserId], references: [id])
+  eventId     String // Link to the specific event for which the rating is given
+  event       Event    @relation(fields: [eventId], references: [id])
   createdAt   DateTime @default(now())
 
-  @@unique([ratedUserId, raterUserId]) // A user can only rate another user once
+  @@unique([ratedUserId, raterUserId, eventId]) // A user can only rate another user once per event
 }
 
 model Event {
@@ -87,6 +89,7 @@ model Event {
   images         String[]
   date           DateTime
   location       String
+  capacity       Int? // Max number of attendees
   pricePerPerson Float? // Optional price per person
   eventType      EventType  @default(SPECIAL) // Type of event (e.g., BREAKFAST, LUNCH, DINNER, SPECIAL)
   hostId         String
@@ -96,12 +99,14 @@ model Event {
   updatedAt      DateTime   @updatedAt
   isDeleted      Boolean    @default(false)
   messages       Message[]
+  Rating         Rating[]
 }
 
 model Attendee {
   id        String   @id @default(uuid())
   userId    String
   eventId   String
+  quantity  Int      @default(1) // Number of spots this attendance record represents
   user      User     @relation(fields: [userId], references: [id])
   event     Event    @relation(fields: [eventId], references: [id])
   createdAt DateTime @default(now())

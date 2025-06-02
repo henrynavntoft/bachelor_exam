@@ -40,14 +40,16 @@ export function EventForm({
         defaultValues: {
             title: initialData?.title || '',
             description: initialData?.description || '',
-            location: initialData?.location || '',
-            // For date, convert to YYYY-MM-DD format required by the date input
             date: initialData?.date
                 ? new Date(initialData.date).toISOString().slice(0, 16) // Format as YYYY-MM-DDThh:mm
                 : '',
+            location: initialData?.location || '',
+            eventType: initialData?.eventType || eventTypes[0], // Default to first if not provided and required
+            // Optional fields from schema
+            pricePerPerson: initialData?.pricePerPerson === undefined ? null : initialData.pricePerPerson,
+            capacity: initialData?.capacity === undefined ? null : initialData.capacity,
             images: initialData?.images || [],
-            pricePerPerson: initialData?.pricePerPerson || null,
-            eventType: initialData?.eventType || undefined,
+            newImages: [], // Default File[] to empty array
         },
     });
 
@@ -222,6 +224,29 @@ export function EventForm({
                                     ))}
                                 </SelectContent>
                             </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="capacity"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Capacity</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="6"
+                                    {...field}
+                                    value={field.value === null || field.value === undefined ? '' : field.value}
+                                    onChange={e => {
+                                        const value = e.target.value;
+                                        field.onChange(value === '' ? null : parseInt(value, 10));
+                                    }}
+                                />
+                            </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}

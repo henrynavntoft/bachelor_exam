@@ -21,10 +21,23 @@ import {
 import LoadingSpinner from '@/app/components/global/LoadingSpinner';
 import Chat from '@/app/(event)/components/Chat';
 import { useAuth } from '@/context/AuthContext';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 interface EventDetailProps {
     event: Event;
     isUserAttending?: boolean;
+    currentUserRsvpQuantity?: number;
     onAttend?: () => Promise<void>;
     showActions?: boolean;
 }
@@ -32,17 +45,43 @@ interface EventDetailProps {
 export function EventDetail({
     event,
     isUserAttending = false,
+    currentUserRsvpQuantity,
     onAttend,
     showActions = true
 }: EventDetailProps) {
     const [chatLoading, setChatLoading] = useState(false);
-    const { isGuest } = useAuth();
+    const { isGuest, user } = useAuth();
+    // State for cancel confirmation dialog
+    const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+
     const handleAttendClick = async () => {
-        if (onAttend) {
-            setChatLoading(true);
-            await onAttend();
-            setChatLoading(false);
+        if (isUserAttending) {
+            // If user is attending, open confirmation dialog
+            setIsCancelConfirmOpen(true);
+        } else {
+            // If user is not attending, proceed with onAttend (which opens AttendEventModal via EventPage)
+            if (onAttend) {
+                setChatLoading(true); // Keep this for the attend flow if needed
+                await onAttend();
+                setChatLoading(false);
+            }
         }
+    };
+
+    // New handler for actual cancellation after confirmation
+    const handleConfirmCancel = async () => {
+        if (!onAttend) return; // onAttend from EventPage.tsx handles the actual API call
+
+        try {
+            // We assume onAttend in EventPage.tsx handles the DELETE request and toasts
+            // So we just need to call it and it will do its thing (including query invalidations)
+            await onAttend();
+        } catch (error) {
+            // Error handling is likely in EventPage.tsx's onAttend, but good to have a catch here too
+            console.error("Error during confirmed cancel in EventDetail:", error);
+            toast.error("Failed to cancel attendance. Please try again.");
+        }
+        setIsCancelConfirmOpen(false); // Close the dialog
     };
 
     return (
@@ -103,7 +142,7 @@ export function EventDetail({
                         </div>
                         <div className="flex items-center">
                             <Users className="h-5 w-5 mr-3 text-brand" />
-                            <p>{event.attendees?.length || 0} attending</p>
+                            <p>{event.attendees?.reduce((sum, attendee) => sum + (attendee.quantity || 0), 0) || 0} attending</p>
                         </div>
                         {/* Display Event Type */}
                         {event.eventType && (
@@ -148,14 +187,48 @@ export function EventDetail({
                 {/* Action buttons */}
                 {showActions && onAttend && isGuest && (
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <Button
-                            className="w-full sm:w-auto"
-                            size="lg"
-                            variant={isUserAttending ? "destructive" : "default"}
-                            onClick={handleAttendClick}
-                        >
-                            {isUserAttending ? "Cancel Attendance" : "Attend Event"}
-                        </Button>
+                        {isUserAttending ? (
+                            <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        className="w-full sm:w-auto"
+                                        size="lg"
+                                        variant={"destructive"} // Always destructive if attending
+                                        onClick={(e) => { e.stopPropagation(); setIsCancelConfirmOpen(true); }} // Open dialog
+                                    >
+                                        {isUserAttending
+                                            ? `Cancel RSVP (${currentUserRsvpQuantity !== undefined ? currentUserRsvpQuantity : event.attendees?.find(att => att.userId === user?.id)?.quantity || 0} spot${(currentUserRsvpQuantity !== undefined ? currentUserRsvpQuantity : event.attendees?.find(att => att.userId === user?.id)?.quantity || 0) === 1 ? '' : 's'})`
+                                            : "Attend Event"}
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Cancel RSVP</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Are you sure you want to cancel your RSVP for &quot;{event.title}&quot;?
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel onClick={() => setIsCancelConfirmOpen(false)}>Back</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            className="bg-destructive hover:bg-destructive/90"
+                                            onClick={handleConfirmCancel} // Call confirmation handler
+                                        >
+                                            Confirm Cancellation
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        ) : (
+                            <Button
+                                className="w-full sm:w-auto"
+                                size="lg"
+                                variant={"default"} // Default variant for attending
+                                onClick={handleAttendClick} // This calls onAttend which opens the modal
+                            >
+                                {"Attend Event"}
+                            </Button>
+                        )}
 
                         {/* Chat button - Only show for attendees */}
                         {isUserAttending && (

@@ -6,12 +6,18 @@ import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
 import { Event } from '@/lib/types/event';
 import { User } from '@/lib/types/user';
+import { Attendee } from '@/lib/types/attendee';
 import { useAuth } from '@/context/AuthContext';
+
+// Define an extended Event type for rsvpedEvents that includes the quantity
+export interface RsvpedEvent extends Event {
+    currentUserRsvpQuantity?: number;
+}
 
 interface GuestDataProviderProps {
     children: (data: {
         currentUser: User | null;
-        rsvpedEvents: Event[];
+        rsvpedEvents: RsvpedEvent[];
         isLoadingEvents: boolean;
     }) => ReactNode;
 }
@@ -20,19 +26,26 @@ export function GuestDataProvider({ children }: GuestDataProviderProps) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
-    const { data: rsvpedEvents = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
-        queryKey: ["rsvpedEvents", user?.id], // Include user ID for specific RSVP list
+    const { data: rsvpedEvents = [], isLoading: isLoadingEvents } = useQuery<RsvpedEvent[]>({
+        queryKey: ["rsvpedEvents", user?.id],
         queryFn: async () => {
             if (!user) return [];
-            // This assumes your API at routes.events.all can be filtered or returns all events
-            // and then we filter client-side. Adjust if your API can directly fetch RSVPs for a user.
             const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
-            const allEvents = res.data.events || [];
-            return allEvents.filter((event: Event) =>
-                event.attendees?.some(attendee => attendee.userId === user.id)
-            );
+            const allEvents: Event[] = res.data.events || [];
+
+            const userRsvpedEvents: RsvpedEvent[] = [];
+            for (const event of allEvents) {
+                const userAttendee = event.attendees?.find((attendee: Attendee) => attendee.userId === user.id);
+                if (userAttendee) {
+                    userRsvpedEvents.push({
+                        ...event,
+                        currentUserRsvpQuantity: userAttendee.quantity,
+                    });
+                }
+            }
+            return userRsvpedEvents;
         },
-        enabled: !!user, // Only run if user is loaded
+        enabled: !!user,
     });
 
     useEffect(() => {

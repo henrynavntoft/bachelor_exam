@@ -9,18 +9,7 @@ import { Event } from '@/lib/types/event';
 import { User } from '@/lib/types/user'; // Import User type
 import { useAuth } from '@/context/AuthContext';
 import LoadingSpinner from '@/app/components/global/LoadingSpinner';
-
-interface EventFormData {
-    title: string;
-    description: string;
-    date: string;
-    location: string;
-    newImages?: File[];
-    images?: string[];
-    pricePerPerson?: number | null;
-    eventType?: string;
-    _imagesToDelete?: string[];
-}
+import { EventFormData, ExtendedEventFormData } from '@/lib/schemas/event.schemas'; // Import from schemas
 
 interface HostDataProviderProps {
     children: (data: {
@@ -60,17 +49,24 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
     async function handleCreateSubmit(data: EventFormData) {
         if (!user) return;
         try {
+            const createPayload = {
+                title: data.title,
+                description: data.description,
+                date: new Date(data.date), // Prisma will store as UTC
+                location: data.location,
+                // hostId is set by the backend using req.user.userId
+                pricePerPerson: data.pricePerPerson,
+                eventType: data.eventType,
+                capacity: data.capacity,
+                images: data.images || [], // Existing image URLs (e.g. if editing and re-using schema)
+                // newImages should NOT be in this initial JSON payload as they are File objects
+                // and the backend createEventSchema no longer expects raw files in the initial creation step.
+                // data.newImages (if any) will be used for the separate upload process after event creation.
+            };
+
             const res = await axiosInstance.post(
                 routes.events.create,
-                {
-                    title: data.title,
-                    description: data.description,
-                    date: new Date(data.date),
-                    location: data.location,
-                    hostId: user.id, // Ensure hostId is included
-                    pricePerPerson: data.pricePerPerson,
-                    eventType: data.eventType,
-                },
+                createPayload,
                 { withCredentials: true }
             );
             const newEventId = res.data.id;
@@ -116,8 +112,8 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
                 throw new Error('Event not found');
             }
 
-            if (data._imagesToDelete && data._imagesToDelete.length > 0) {
-                for (const imgUrl of data._imagesToDelete) {
+            if ((data as ExtendedEventFormData)._imagesToDelete && (data as ExtendedEventFormData)._imagesToDelete!.length > 0) {
+                for (const imgUrl of (data as ExtendedEventFormData)._imagesToDelete!) {
                     try {
                         const imageKey = imgUrl.split('/').pop();
                         if (imageKey) {
@@ -147,17 +143,25 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
                 uploadedUrls = await Promise.all(ups);
             }
 
+            const existingImagesNotDeleted = currentEvent.images?.filter(
+                img => !(data as ExtendedEventFormData)._imagesToDelete?.includes(img)
+            ) || [];
+            const finalImages = [...existingImagesNotDeleted, ...uploadedUrls];
+
+            const updatePayload = {
+                title: data.title,
+                description: data.description,
+                date: new Date(data.date),
+                location: data.location,
+                images: finalImages,
+                pricePerPerson: data.pricePerPerson,
+                eventType: data.eventType,
+                capacity: data.capacity,
+            };
+
             await axiosInstance.put(
                 routes.events.update(selectedEventId),
-                {
-                    title: data.title,
-                    description: data.description,
-                    date: new Date(data.date),
-                    location: data.location,
-                    images: [...(data.images || []), ...uploadedUrls],
-                    pricePerPerson: data.pricePerPerson,
-                    eventType: data.eventType,
-                },
+                updatePayload,
                 { withCredentials: true }
             );
 

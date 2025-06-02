@@ -34,7 +34,7 @@ router.post('/users/:userId/ratings', authorize(), async (req: AuthenticatedRequ
         }
         throw err;
     }
-    const { rating, comment } = body;
+    const { rating, comment, eventId } = body;
     const raterUserId = req.user?.userId;
 
     if (!raterUserId) {
@@ -58,18 +58,19 @@ router.post('/users/:userId/ratings', authorize(), async (req: AuthenticatedRequ
             return;
         }
 
-        // Check if this rater has already rated this user
+        // Check if this rater has already rated this user for this event
         const existingRating = await prisma.rating.findUnique({
             where: {
-                ratedUserId_raterUserId: {
+                ratedUserId_raterUserId_eventId: {
                     ratedUserId: ratedUserId,
-                    raterUserId: raterUserId
+                    raterUserId: raterUserId,
+                    eventId: eventId
                 }
             }
         });
 
         if (existingRating) {
-            res.status(409).json({ message: 'You have already rated this user.' });
+            res.status(409).json({ message: 'You have already rated this user for this event.' });
             return;
         }
 
@@ -79,6 +80,7 @@ router.post('/users/:userId/ratings', authorize(), async (req: AuthenticatedRequ
                 comment,
                 ratedUserId,
                 raterUserId,
+                eventId,
             },
             include: { // Optionally include related data, e.g., rater or rated user info
                 raterUser: {

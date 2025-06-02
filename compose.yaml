@@ -42,6 +42,8 @@ services:
       - ./backend/.env.${RTE}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - internal-network
     healthcheck:
