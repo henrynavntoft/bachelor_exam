@@ -12,7 +12,7 @@ import React from 'react';
 interface ProfileFormData {
     firstName: string;
     lastName: string;
-    profilePicture?: File | string;
+    profilePicture?: File | string | null;
 }
 
 interface UserProfileViewProps {
