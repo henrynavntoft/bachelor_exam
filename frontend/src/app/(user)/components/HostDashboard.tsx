@@ -5,6 +5,7 @@ import { EventForm } from '@/app/(user)/components/EventForm';
 import { EventCard } from '@/app/(event)/components/EventCard';
 import { Event } from '@/lib/types/event';
 import { User } from '@/lib/types/user';
+import { EventFormData } from '@/lib/schemas/event.schemas';
 import {
     AlertDialog,
     AlertDialogContent,
@@ -12,16 +13,6 @@ import {
     AlertDialogTitle,
     AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
-
-interface EventFormData {
-    title: string;
-    description: string;
-    date: string;
-    location: string;
-    newImages?: File[];
-    images?: string[];
-    _imagesToDelete?: string[];
-}
 
 interface HostDashboardProps {
     currentUser: User | null;
@@ -52,7 +43,6 @@ export function HostDashboard({
     const formInitialData = selectedEventData ? {
         ...selectedEventData,
         eventType: selectedEventData.eventType as "BREAKFAST" | "LUNCH" | "DINNER" | "SPECIAL" | undefined,
-        // Ensure date is in 'YYYY-MM-DDTHH:mm' format if needed by EventForm's defaultValues logic
         date: selectedEventData.date ? new Date(selectedEventData.date).toISOString().slice(0, 16) : undefined,
     } : undefined;
 
