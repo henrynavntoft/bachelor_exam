@@ -32,6 +32,7 @@ interface EventCardProps {
     className?: string;
     isClickable?: boolean;
     isAdminView?: boolean;
+    showAttendControls?: boolean;
 }
 
 export function EventCard({
