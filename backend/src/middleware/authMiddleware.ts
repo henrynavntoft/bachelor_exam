@@ -4,9 +4,8 @@ import type { CookieOptions } from 'express';
 import { prisma } from '../config/prisma';
 import { eventIdParamSchema } from '../schemas/eventSchema'; // Assuming this validates { id: string }
 import { ZodError, ZodIssue } from 'zod';
+import { Role } from '@prisma/client';
 
-// Supported user roles for authorization
-export type Role = 'ADMIN' | 'HOST' | 'GUEST';
 // include SELF for user-own resources, EVENT_OWNER for event ownership
 export type AuthRole = Role | 'SELF' | 'EVENT_OWNER';
 

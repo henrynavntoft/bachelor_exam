@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { Calendar, MapPin, Users, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Event } from '@/types/event';
+import { Event } from '@/lib/types/event';
 import {
     Carousel,
     CarouselContent,
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import LoadingSpinner from '@/app/components/global/LoadingSpinner';
 import Chat from '@/app/(event)/components/Chat';
+import { useAuth } from '@/context/AuthContext';
 
 interface EventDetailProps {
     event: Event;
@@ -35,7 +36,7 @@ export function EventDetail({
     showActions = true
 }: EventDetailProps) {
     const [chatLoading, setChatLoading] = useState(false);
-
+    const { isGuest } = useAuth();
     const handleAttendClick = async () => {
         if (onAttend) {
             setChatLoading(true);
@@ -89,9 +90,9 @@ export function EventDetail({
             </section>
 
             {/* Event metadata with icons */}
-            <section className="grid grid-cols-1 gap-6">
+            <section className="grid grid-cols-1 gap-4">
                 <div>
-                    <div className="flex flex-col space-y-3 mb-6">
+                    <div className="flex flex-col space-y-3 mb-2">
                         <div className="flex items-center">
                             <Calendar className="h-5 w-5 mr-3 text-brand" />
                             <p>{format(new Date(event.date), "EEEE, MMMM dd, yyyy 'at' h:mm a")}</p>
@@ -131,7 +132,7 @@ export function EventDetail({
                 </div>
 
                 {/* Action buttons */}
-                {showActions && onAttend && (
+                {showActions && onAttend && isGuest && (
                     <div className="flex flex-col sm:flex-row gap-4">
                         <Button
                             className="w-full sm:w-auto"

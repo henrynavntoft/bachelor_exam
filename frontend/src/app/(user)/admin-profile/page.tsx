@@ -1,12 +1,13 @@
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
+import { User } from '@/lib/types/user';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { AdminDataProvider } from '@/app/(admin)/components/AdminDataProvider';
-import { AdminDashboard } from '@/app/(admin)/components/AdminDashboard';
+import { AdminDataProvider } from '@/app/(user)/components/AdminDataProvider';
+import { AdminDashboard } from '@/app/(user)/components/AdminDashboard';
 
-export default function DashboardPage() {
+export default function AdminProfile() {
     const { user, isAuthenticated, isAdmin, isLoading } = useAuth();
     const router = useRouter();
 
@@ -30,10 +31,7 @@ export default function DashboardPage() {
         <AdminDataProvider>
             {({ users, events, deleteUser, deleteEvent, reactivateUser }) => (
                 <AdminDashboard
-                    currentUser={user ? {
-                        ...user,
-                        isDeleted: false
-                    } : null}
+                    currentUser={user as User}
                     users={users}
                     events={events}
                     onDeleteUser={deleteUser}

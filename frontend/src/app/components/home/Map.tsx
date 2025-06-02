@@ -4,7 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import mapboxgl from 'mapbox-gl';
 import { useEffect, useRef } from 'react';
 import axios from 'axios';
-import MapPopup from './MapPopup';
+import MapPopup from '@/app/components/home/MapPopup';
 import { renderToString } from 'react-dom/server';
 import { useTheme } from 'next-themes';
 

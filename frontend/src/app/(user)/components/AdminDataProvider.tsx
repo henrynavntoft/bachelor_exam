@@ -5,8 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
-import { User } from '@/types/user';
-import { Event } from '@/types/event';
+import { User } from '@/lib/types/user';
+import { Event } from '@/lib/types/event';
 import LoadingSpinner from '@/app/components/global/LoadingSpinner';
 
 interface AdminDataProviderProps {

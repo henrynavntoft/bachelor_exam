@@ -3,7 +3,6 @@
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FieldErrors } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -14,21 +13,11 @@ import { useState } from 'react';
 import { Eye, EyeOff, Loader2, Info } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
+import { loginSchema, LoginFormValues } from '@/lib/schemas/auth.schemas';
 
 interface ErrorResponse {
     error: string;
 }
-
-const loginSchema = z.object({
-    email: z.string().email("Invalid email address"),
-    password: z.string()
-        .min(8, "Password must be at least 8 characters")
-        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-        .regex(/[0-9]/, "Password must contain at least one number")
-        .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
     const { login } = useAuth();

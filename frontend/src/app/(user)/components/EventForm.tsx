@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,40 +9,11 @@ import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { MapboxLocationInput } from "@/app/components/home/MapboxLocationInput";
-
-const eventSchema = z.object({
-    title: z.string().min(1, 'Title is required'),
-    description: z.string().min(1, 'Description is required'),
-    date: z.string().min(1, 'Date is required'),
-    location: z.string().min(1, 'Location is required'),
-    images: z.array(z.string()).optional(),
-    newImages: z.array(z.instanceof(File))
-        .optional()
-        .refine(
-            (files) => !files || files.length <= 5,
-            "Maximum 5 images allowed"
-        )
-        .refine(
-            (files) => !files || files.every(file => file.size <= 10 * 1024 * 1024),
-            "Each image must be less than 10MB"
-        )
-        .refine(
-            (files) => !files || files.every(file =>
-                ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif', 'image/bmp', 'image/tiff', 'image/ico', 'image/heic', 'image/heif'].includes(file.type)
-            ),
-            "Only images are allowed"
-        ),
-});
-
-type EventFormData = z.infer<typeof eventSchema>;
-
-interface ExtendedEventFormData extends EventFormData {
-    _imagesToDelete?: string[];
-}
+import { eventSchema, EventFormData, ExtendedEventFormData } from "@/lib/schemas/event.schemas";
 
 interface EventFormProps {
     initialData?: Partial<EventFormData> & { id?: string };
-    onSubmit: (data: EventFormData) => Promise<void>;
+    onSubmit: (data: ExtendedEventFormData) => Promise<void>;
     onCancel: () => void;
     existingImages?: string[];
     onImageDelete?: (url: string) => void;

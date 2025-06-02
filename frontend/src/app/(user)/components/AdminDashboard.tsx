@@ -1,10 +1,10 @@
 'use client';
 
-import { User } from '@/types/user';
-import { Event } from '@/types/event';
+import { User } from '@/lib/types/user';
+import { Event } from '@/lib/types/event';
 import { UserCard } from '@/app/(user)/components/UserCard';
 import { EventCard } from '@/app/(event)/components/EventCard';
-import Image from 'next/image';
+import { UserProfileHeader } from './UserProfileHeader';
 
 interface AdminDashboardProps {
     currentUser: User | null;
@@ -26,30 +26,23 @@ export function AdminDashboard({
     return (
         <article className="space-y-6">
             {/* Admin Header */}
-            <div className="flex flex-row justify-between items-center gap-4 p-4 bg-card rounded-lg border">
-                <div>
-                    <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-                    <p className="text-muted-foreground mt-1">
-                        Welcome, {currentUser?.firstName} {currentUser?.lastName}
-                    </p>
-                </div>
-                {currentUser?.profilePicture && (
-                    <div className="flex-shrink-0">
-                        <Image
-                            src={currentUser.profilePicture}
-                            alt="Profile Picture"
-                            width={64}
-                            height={64}
-                            className="rounded-full object-cover"
-                        />
-                    </div>
+            <div className="p-4 bg-card rounded-lg border">
+                {currentUser && (
+                    <UserProfileHeader
+                        user={currentUser}
+                        avatarSize="lg"
+                        className="pb-2 border-b"
+                    />
                 )}
+                <p className="text-muted-foreground mt-2">
+                    Welcome, {currentUser?.firstName} {currentUser?.lastName}. Manage users and events below.
+                </p>
             </div>
 
             {/* Users Section */}
             <section>
                 <h2 className="text-2xl font-semibold mb-4">All Users</h2>
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Array.isArray(users) ? users.map((user) => (
                         <UserCard
                             key={user.id}
@@ -66,13 +59,14 @@ export function AdminDashboard({
             {/* Events Section */}
             <section>
                 <h2 className="text-2xl font-semibold mb-4">All Events</h2>
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Array.isArray(events) ? events.map((event) => (
                         <EventCard
                             key={event.id}
                             event={event}
+                            currentUser={currentUser as User}
                             onDelete={onDeleteEvent}
-                            isAdmin
+                            isAdminView={true}
                         />
                     )) : (
                         <p className="text-muted-foreground">No events found or data is loading.</p>

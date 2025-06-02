@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import axios from 'axios'; // Keep for isAxiosError type guard
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FieldErrors } from 'react-hook-form';
 import { toast } from "sonner";
@@ -17,28 +16,12 @@ import { Eye, EyeOff, Loader2, UserRound, Users } from 'lucide-react';
 
 import { routes } from '@/lib/routes'; // Assuming this contains your API routes
 import axiosInstance from '@/lib/axios'; // Your configured axios instance
+import { signupSchema, SignupFormValues } from '@/lib/schemas/auth.schemas'; // Import centralized schema and type
+import { Role } from '@/lib/types/role'; // Corrected import path for Role
 
 interface ErrorResponse {
     error: string;
 }
-
-const signupSchema = z.object({
-    firstName: z.string().min(1, "First name is required").max(50, "First name too long"),
-    lastName: z.string().min(1, "Last name is required").max(50, "Last name too long"),
-    email: z.string().email("Invalid email address"),
-    password: z.string()
-        .min(8, "Password must be at least 8 characters")
-        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-        .regex(/[0-9]/, "Password must contain at least one number")
-        .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character (e.g., !@#$%^&*)"),
-    confirmPassword: z.string(),
-    role: z.enum(['GUEST', 'HOST'], { required_error: "Please select a role" }),
-}).refine(data => data.password === data.confirmPassword, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"], // Show error on confirmPassword field
-});
-
-type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function SignupPage() {
     const router = useRouter();
@@ -53,7 +36,7 @@ export default function SignupPage() {
             email: '',
             password: '',
             confirmPassword: '',
-            role: "GUEST",
+            role: Role.GUEST, // Use Role.GUEST as the default
         },
     });
 

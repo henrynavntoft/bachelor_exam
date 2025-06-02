@@ -9,9 +9,12 @@ import MapToggle from "./components/home/MapToggle";
 import MobileMap from "./components/home/MobileMap";
 import InfiniteLoader from "./components/global/InfiniteLoader";
 import { useEvents } from "@/hooks/useEvents";
+import { useAuth } from "@/context/AuthContext";
+import { User } from "@/lib/types/user";
 
 export default function Home() {
   const [showMobileMap, setShowMobileMap] = useState(false);
+  const { user: currentUser, isLoading: authIsLoading } = useAuth();
 
   const {
     allEvents,
@@ -22,7 +25,7 @@ export default function Home() {
     error
   } = useEvents(6); // Fetch 6 events per page
 
-  if (isLoading) {
+  if (isLoading || authIsLoading) {
     return <LoadingSpinner />;
   }
 
@@ -49,7 +52,7 @@ export default function Home() {
             <MapToggle onShowMap={() => setShowMobileMap(true)} />
           </div>
 
-          <EventGrid events={allEvents} />
+          <EventGrid events={allEvents} currentUser={currentUser as User} />
 
           <InfiniteLoader
             fetchNextPage={fetchNextPage}

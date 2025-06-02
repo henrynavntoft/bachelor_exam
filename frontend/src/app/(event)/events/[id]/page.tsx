@@ -11,7 +11,7 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { EventDetail } from "@/app/(event)/components/EventDetail";
-import { Event } from "@/types/event";
+import { Event } from "@/lib/types/event";
 
 export default function EventPage() {
     const params = useParams();
@@ -93,7 +93,7 @@ export default function EventPage() {
     }
 
     return (
-        <main className="flex flex-col gap-4">
+        <main className="container mx-auto px-4 py-3">
             <EventDetail
                 event={event}
                 isUserAttending={isUserAttending}

@@ -2,7 +2,6 @@
 
 import axios from 'axios';
 import { Button } from '@/components/ui/button';
-import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm, FieldErrors } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -11,16 +10,11 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { routes } from '@/lib/routes';
+import { forgotPasswordSchema, ForgotPasswordFormValues } from '@/lib/schemas/auth.schemas';
 
 interface ErrorResponse {
     error: string;
 }
-
-const forgotPasswordSchema = z.object({
-    email: z.string().email("Invalid email address"),
-});
-
-type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
     const form = useForm<ForgotPasswordFormValues>({

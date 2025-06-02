@@ -52,9 +52,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(res.data.user);
 
         if (res.data.user.role === 'ADMIN') {
-            router.push('/dashboard');
-        } else {
-            router.push('/profile');
+            router.push('/admin-profile');
+        } else if (res.data.user.role === 'HOST') {
+            router.push('/host-profile');
+        } else if (res.data.user.role === 'GUEST') {
+            router.push('/guest-profile');
         }
     };
 

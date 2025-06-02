@@ -1,6 +1,5 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,18 +8,7 @@ import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-
-const profileSchema = z.object({
-    firstName: z.string().min(2, "First name is required"),
-    lastName: z.string().min(2, "Last name is required"),
-    profilePicture: z.union([
-        z.instanceof(File),
-        z.string(),
-        z.undefined(),
-    ]).optional(),
-});
-
-type ProfileFormData = z.infer<typeof profileSchema>;
+import { profileSchema, ProfileFormData } from "@/lib/schemas/profile.schemas";
 
 interface ProfileFormProps {
     initialData: {

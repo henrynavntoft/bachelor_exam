@@ -45,8 +45,8 @@ export default function Header() {
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem asChild>
-                                        <Link href={user.role === 'ADMIN' ? '/admin' : '/profile'} className="cursor-pointer">
-                                            {user.role === 'ADMIN' ? 'Admin Dashboard' : 'Profile'}
+                                        <Link href={user.role === 'ADMIN' ? '/admin-profile' : user.role === 'HOST' ? '/host-profile' : '/guest-profile'} className="cursor-pointer">
+                                            {user.role === 'ADMIN' ? 'Admin Dashboard' : user.role === 'HOST' ? 'Host Profile' : 'Guest Profile'}
                                         </Link>
                                     </DropdownMenuItem>
 
