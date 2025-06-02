@@ -64,10 +64,8 @@ export function AttendEventModal({ event, isOpen, onClose, onConfirm }: AttendEv
         setError(null);
         setIsLoading(true);
         try {
-            // The actual API call is now done via the onConfirm prop
             await onConfirm(event.id, quantity);
-            toast.success(`Successfully RSVPed for ${event.title} with ${quantity} spot(s).`);
-            onClose(); // Close modal on success
+            // Do NOT show toast or close modal here; parent handles it!
         } catch (err) {
             console.error('Error attending event:', err);
             let errorMessage = 'Failed to RSVP for the event. Please try again.';
