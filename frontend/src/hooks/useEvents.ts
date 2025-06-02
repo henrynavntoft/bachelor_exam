@@ -1,6 +1,8 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import axiosInstance from "@/lib/axios";
 import { routes } from "@/lib/routes";
+import { User } from '@/lib/types/user';
+import { Attendee } from '@/lib/types/attendee';
 
 export interface Event {
     id: string;
@@ -10,15 +12,8 @@ export interface Event {
     date: string;
     location: string;
     hostId: string;
-    host: {
-        firstName: string;
-        lastName: string;
-        profilePicture: string;
-    };
-    attendees: {
-        userId: string;
-        eventId: string;
-    }[];
+    host: User;
+    attendees: Attendee[];
 }
 
 interface EventsResponse {
