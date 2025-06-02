@@ -1,5 +1,5 @@
 import { EventCard } from '@/app/(event)/components/EventCard';
-import { Event } from "@/hooks/useEvents";
+import { Event } from '@/lib/types/event';
 import { User } from '@/lib/types/user';
 
 interface EventGridProps {
@@ -14,7 +14,7 @@ export default function EventGrid({ events, currentUser }: EventGridProps) {
             {events.map((event) => (
                 <EventCard
                     key={event.id}
-                    event={event}
+                    event={event as Event}
                     currentUser={currentUser}
                     showAttendControls={true}
                     isClickable={true}
