@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Event } from '@/lib/types/event'; // Assuming Event type is available
-// import axiosInstance from '@/lib/axios'; // Removed unused import
-// import { routes } from '@/lib/routes'; // Removed unused import
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { AxiosError } from 'axios'; // Import AxiosError for better error typing

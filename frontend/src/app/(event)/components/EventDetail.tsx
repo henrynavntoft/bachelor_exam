@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
+
 interface EventDetailProps {
     event: Event;
     isUserAttending?: boolean;
@@ -84,6 +85,9 @@ export function EventDetail({
         setIsCancelConfirmOpen(false); // Close the dialog
     };
 
+    // Debug logs for host and full event data
+    console.log("Event host:", event.host);
+    console.log("Full event data:", event);
     return (
         <article className="space-y-6">
             <section>
@@ -129,8 +133,8 @@ export function EventDetail({
             </section>
 
             {/* Event metadata with icons */}
-            <section className="grid grid-cols-1 gap-4 mb-4">
-                <div>
+            <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-4">
+                <div className="lg:col-span-2 space-y-4">
                     <div className="flex flex-col space-y-3">
                         <div className="flex items-center">
                             <Calendar className="h-5 w-5 mr-3 text-brand" />
@@ -159,10 +163,11 @@ export function EventDetail({
                             </div>
                         )}
                     </div>
-
+                </div>
+                <div className="space-y-4">
                     {/* Host information if available */}
                     {event.host && (
-                        <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
+                        <div className="flex items-center gap-3 pb-4 rounded-lg">
                             {event.host.profilePicture ? (
                                 <Image
                                     src={event.host.profilePicture}
@@ -182,86 +187,86 @@ export function EventDetail({
                             </div>
                         </div>
                     )}
-                </div>
 
-                {/* Action buttons */}
-                {showActions && onAttend && isGuest && (
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        {isUserAttending ? (
-                            <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
-                                <AlertDialogTrigger asChild>
-                                    <Button
-                                        className="w-full sm:w-auto"
-                                        size="lg"
-                                        variant={"destructive"} // Always destructive if attending
-                                        onClick={(e) => { e.stopPropagation(); setIsCancelConfirmOpen(true); }} // Open dialog
-                                    >
-                                        {isUserAttending
-                                            ? `Cancel RSVP (${currentUserRsvpQuantity !== undefined ? currentUserRsvpQuantity : event.attendees?.find(att => att.userId === user?.id)?.quantity || 0} spot${(currentUserRsvpQuantity !== undefined ? currentUserRsvpQuantity : event.attendees?.find(att => att.userId === user?.id)?.quantity || 0) === 1 ? '' : 's'})`
-                                            : "Attend Event"}
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Cancel RSVP</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            Are you sure you want to cancel your RSVP for &quot;{event.title}&quot;?
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={() => setIsCancelConfirmOpen(false)}>Back</AlertDialogCancel>
-                                        <AlertDialogAction
-                                            className="bg-destructive hover:bg-destructive/90"
-                                            onClick={handleConfirmCancel} // Call confirmation handler
+                    {/* Action buttons */}
+                    {showActions && onAttend && isGuest && (
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            {isUserAttending ? (
+                                <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
+                                    <AlertDialogTrigger asChild>
+                                        <Button
+                                            className="w-full sm:w-auto"
+                                            size="lg"
+                                            variant={"destructive"} // Always destructive if attending
+                                            onClick={(e) => { e.stopPropagation(); setIsCancelConfirmOpen(true); }} // Open dialog
                                         >
-                                            Confirm Cancellation
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        ) : (
-                            <Button
-                                className="w-full sm:w-auto"
-                                size="lg"
-                                variant={"default"} // Default variant for attending
-                                onClick={handleAttendClick} // This calls onAttend which opens the modal
-                            >
-                                {"Attend Event"}
-                            </Button>
-                        )}
+                                            {isUserAttending
+                                                ? `Cancel RSVP (${currentUserRsvpQuantity !== undefined ? currentUserRsvpQuantity : event.attendees?.find(att => att.userId === user?.id)?.quantity || 0} spot${(currentUserRsvpQuantity !== undefined ? currentUserRsvpQuantity : event.attendees?.find(att => att.userId === user?.id)?.quantity || 0) === 1 ? '' : 's'})`
+                                                : "Attend Event"}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Cancel RSVP</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Are you sure you want to cancel your RSVP for &quot;{event.title}&quot;?
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel onClick={() => setIsCancelConfirmOpen(false)}>Back</AlertDialogCancel>
+                                            <AlertDialogAction
+                                                className="bg-destructive hover:bg-destructive/90"
+                                                onClick={handleConfirmCancel} // Call confirmation handler
+                                            >
+                                                Confirm Cancellation
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            ) : (
+                                <Button
+                                    className="w-full sm:w-auto"
+                                    size="lg"
+                                    variant={"default"} // Default variant for attending
+                                    onClick={handleAttendClick} // This calls onAttend which opens the modal
+                                >
+                                    {"Attend Event"}
+                                </Button>
+                            )}
 
-                        {/* Chat button - Only show for attendees */}
-                        {isUserAttending && (
-                            <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button
-                                        className="w-full sm:w-auto"
-                                        size="lg"
-                                        disabled={chatLoading}
-                                    >
-                                        <MessageCircle className="mr-2 h-5 w-5" />
-                                        Open Chat
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="h-screen w-full border-none lg:max-w-[70%] lg:h-[90%]">
-                                    <DialogHeader>
-                                        <DialogTitle>{event.title}</DialogTitle>
-                                    </DialogHeader>
+                            {/* Chat button - Only show for attendees */}
+                            {isUserAttending && (
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            className="w-full sm:w-auto"
+                                            size="lg"
+                                            disabled={chatLoading}
+                                        >
+                                            <MessageCircle className="mr-2 h-5 w-5" />
+                                            Open Chat
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="h-screen w-full border-none lg:max-w-[70%] lg:h-[90%]">
+                                        <DialogHeader>
+                                            <DialogTitle>{event.title}</DialogTitle>
+                                        </DialogHeader>
 
-                                    <div className="flex-1 overflow-hidden h-full">
-                                        {chatLoading ? (
-                                            <div className="flex justify-center py-8">
-                                                <LoadingSpinner />
-                                            </div>
-                                        ) : (
-                                            <Chat eventId={event.id} />
-                                        )}
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                        )}
-                    </div>
-                )}
+                                        <div className="flex-1 overflow-hidden h-full">
+                                            {chatLoading ? (
+                                                <div className="flex justify-center py-8">
+                                                    <LoadingSpinner />
+                                                </div>
+                                            ) : (
+                                                <Chat eventId={event.id} />
+                                            )}
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                            )}
+                        </div>
+                    )}
+                </div>
             </section>
         </article>
     );

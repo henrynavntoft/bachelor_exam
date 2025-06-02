@@ -232,7 +232,7 @@ export function EventCard({
                     <div className="flex items-center text-muted-foreground text-sm">
                         <Wallet className="h-4 w-4 mr-2" />
                         {event.pricePerPerson !== null && event.pricePerPerson !== undefined && (
-                            <p className="text-sm text-muted-foreground mb-2">
+                            <p className="text-sm text-muted-foreground">
                                 Price: {event.pricePerPerson > 0 ? `${Math.round(event.pricePerPerson)} DKK` : 'Free'}
                             </p>
                         )}

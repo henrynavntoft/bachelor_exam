@@ -88,7 +88,14 @@ router.get('/:id', async (req: Request, res: Response) => {
         const event = await prisma.event.findUnique({
             where: { id },
             include: {
-                attendees: true
+                attendees: true,
+                host: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        profilePicture: true
+                    }
+                }
             }
         });
         if (!event) {
