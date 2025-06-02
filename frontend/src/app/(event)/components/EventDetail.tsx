@@ -43,6 +43,7 @@ interface EventDetailProps {
     isUserAttending?: boolean;
     currentUserRsvpQuantity?: number;
     showActions?: boolean;
+    onAttend?: () => Promise<void>;
 }
 
 // Type guard for AxiosError
