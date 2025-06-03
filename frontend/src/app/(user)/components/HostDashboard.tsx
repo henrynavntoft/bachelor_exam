@@ -50,6 +50,7 @@ export function HostDashboard({
         ...selectedEventData,
         eventType: selectedEventData.eventType as "BREAKFAST" | "LUNCH" | "DINNER" | "SPECIAL" | undefined,
         date: selectedEventData.date ? new Date(selectedEventData.date).toISOString().slice(0, 16) : undefined,
+        images: selectedEventData.images?.map(img => img.imageUrl) || [],
     } : undefined;
 
     return (
