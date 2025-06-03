@@ -5,14 +5,14 @@ const prisma = new PrismaClient();
 
 async function main() {
     // Hash the passwords
-    const adminPassword = await bcrypt.hash('Admin123-', 10);
+    const adminPassword = await bcrypt.hash('AdminPassword123!', 14);
 
     // Create Admin User
     await prisma.user.create({
         data: {
             firstName: 'Admin',
             lastName: 'User',
-            email: 'admin@example.com',
+            email: 'admin@meetandgreet.com',
             profilePicture: 'https://robohash.org/BKM.png?set=set1',
             hashedPassword: adminPassword,
             role: 'ADMIN',
