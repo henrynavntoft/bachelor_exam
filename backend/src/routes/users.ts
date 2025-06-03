@@ -20,6 +20,45 @@ router.get('/', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Res
 });
 
 //////////////////////////////////////////////////////////////////////////////////
+// GET: Get a single user by ID (public profile - no auth required)
+router.get('/:id/public', async (req, res: Response) => {
+    let userId: string;
+    try {
+        userId = userIdParamSchema.parse({ userId: req.params.id }).userId;
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        throw err;
+    }
+    try {
+        const user = await prisma.user.findUnique({ 
+            where: { id: userId },
+            select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                profilePicture: true,
+                role: true,
+                createdAt: true,
+                // Exclude sensitive fields like email, hashedPassword, isVerified, etc.
+            }
+        });
+        if (!user) {
+            res.status(404).json({ message: 'User not found' });
+            return;
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        console.error('Error fetching public user profile:', error);
+        res.status(500).json({ message: 'Failed to fetch user profile' });
+        return;
+    }
+});
+
+//////////////////////////////////////////////////////////////////////////////////
 // GET: Get a single user by ID
 router.get('/:id', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
     let userId: string;

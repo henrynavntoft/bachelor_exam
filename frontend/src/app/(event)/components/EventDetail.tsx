@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
-import { Calendar, MapPin, Users, MessageCircle, Wallet, CookingPot } from 'lucide-react';
+import { Calendar, MapPin, Users, MessageCircle, Wallet, CookingPot, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Event } from '@/lib/types/event';
 import {
@@ -33,10 +33,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { AttendEventModal } from '@/app/(event)/components/AttendEventModal';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import axiosInstance from '@/lib/axios';
 import { routes } from '@/lib/routes';
 import { AxiosError } from 'axios';
+import { useRouter } from 'next/navigation';
+import { AttendeeCard } from '@/app/(event)/components/AttendeeCard';
 
 interface EventDetailProps {
     event: Event;
@@ -66,6 +68,17 @@ export function EventDetail({
     const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
     const [isAttendModalOpen, setIsAttendModalOpen] = useState(false);
     const queryClient = useQueryClient();
+    const router = useRouter();
+
+    // Fetch host's average rating
+    const { data: hostRating } = useQuery({
+        queryKey: ['hostRating', event.hostId],
+        queryFn: async () => {
+            const res = await axiosInstance.get(routes.users.averageRating(event.hostId), { withCredentials: true });
+            return res.data;
+        },
+        enabled: !!event.hostId,
+    });
 
     // Check if event is in the past
     const isPastEvent = new Date(event.date) < new Date();
@@ -223,7 +236,20 @@ export function EventDetail({
                                 )}
                                 <div>
                                     <p className="font-medium">Hosted by</p>
-                                    <p>{event.host.firstName} {event.host.lastName}</p>
+                                    <button 
+                                        onClick={() => router.push(`/profile/${event.hostId}`)}
+                                        className="text-left hover:text-brand transition-colors cursor-pointer p-0 bg-transparent border-none"
+                                    >
+                                        <p className="hover:underline">{event.host.firstName} {event.host.lastName}</p>
+                                    </button>
+                                    {hostRating && hostRating.averageRating && (
+                                        <div className="flex items-center gap-1 mt-1">
+                                            <Star className="h-4 w-4 text-brand fill-current" />
+                                            <span className="text-sm text-muted-foreground">
+                                                {Number(hostRating.averageRating).toFixed(1)} ({hostRating.ratingCount} reviews)
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -308,6 +334,30 @@ export function EventDetail({
                         )}
                     </div>
                 </section>
+
+                {/* People Participating Section */}
+                {event.attendees && event.attendees.length > 0 && (
+                    <section className="mb-8">
+                        <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+                            <Users className="h-6 w-6 text-brand" />
+                            People Participating ({event.attendees.length})
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {event.attendees.map((attendee) => (
+                                attendee.user && (
+                                    <AttendeeCard
+                                        key={attendee.id}
+                                        userId={attendee.user.id}
+                                        firstName={attendee.user.firstName}
+                                        lastName={attendee.user.lastName}
+                                        profilePicture={attendee.user.profilePicture || ''}
+                                        quantity={attendee.quantity}
+                                    />
+                                )
+                            ))}
+                        </div>
+                    </section>
+                )}
             </article>
 
             <AttendEventModal

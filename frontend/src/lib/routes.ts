@@ -25,6 +25,7 @@ export const routes = {
     users: {
         all: `${API_BASE}/users`,
         one: (id: string) => `${API_BASE}/users/${id}`,
+        publicProfile: (id: string) => `${API_BASE}/users/${id}/public`,
         delete: (id: string) => `${API_BASE}/users/${id}`,
         update: (id: string) => `${API_BASE}/users/${id}`,
         updateProfile: (id: string) => `${API_BASE}/users/${id}`,

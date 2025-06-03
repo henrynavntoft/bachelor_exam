@@ -50,7 +50,18 @@ router.get('/', async (req: Request, res: Response) => {
                         profilePicture: true,
                     },
                 },
-                attendees: true
+                attendees: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                profilePicture: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -90,7 +101,18 @@ router.get('/:id', async (req: Request, res: Response) => {
         const event = await prisma.event.findUnique({
             where: { id },
             include: {
-                attendees: true,
+                attendees: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                profilePicture: true
+                            }
+                        }
+                    }
+                },
                 host: {
                     select: {
                         firstName: true,
