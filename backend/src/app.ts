@@ -36,7 +36,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/upload', uploadRoute);
-app.use('/api', ratingsRouter);
+app.use('/api/users', ratingsRouter);
 
 app.use((req: Request, res: Response) => {
     res.status(404).json({ error: 'Not Found' });

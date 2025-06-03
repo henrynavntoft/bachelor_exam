@@ -57,21 +57,10 @@ export function GuestDataProvider({ children }: GuestDataProviderProps) {
 
     useEffect(() => {
         const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-            // A common pattern: if a mutation related to 'attendance' completes,
-            // or if a query tagged with 'attendance' changes, refresh rsvpedEvents.
-            // The original code checked for `queryClient.getQueryData(['attendance'])`.
-            // This could mean that an attendance mutation updates a query with this key,
-            // or it simply exists as a signal.
-
-            // Let's simplify and assume any cache event *could* be relevant if not overly specific.
-            // A more targeted approach involves checking event.type or specific queryKeys if available in `event`.
-            // For now, to replicate the spirit of the original, if an 'attendance' related query changes state.
+            // Invalidate RSVP events when attendance-related queries change
             if (event && event.query && event.query.queryKey[0] === 'attendance') {
                 queryClient.invalidateQueries({ queryKey: ["rsvpedEvents", user?.id] });
             }
-            // A more direct approach if you have an RSVP mutation:
-            // Call invalidateQueries in the mutation's onSuccess.
-            // This useEffect is more of a fallback or general cache sync.
         });
         return () => unsubscribe();
     }, [queryClient, user?.id]);

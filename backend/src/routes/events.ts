@@ -430,4 +430,52 @@ router.get('/:eventId/attendees', authorize(), async (req: AuthenticatedRequest,
     }
 });
 
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Get all past events (hosted or attended) for a user
+router.get('/users/:id/past-events', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+    let userId: string;
+    try {
+        userId = req.params.id;
+        // Basic UUID validation
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId)) {
+            res.status(400).json({ error: 'Invalid user ID format' });
+            return;
+        }
+    } catch {
+        res.status(400).json({ error: 'Invalid user ID' });
+        return;
+    }
+    
+    try {
+        // Get current date
+        const now = new Date();
+        // Find events where user is host and date is in the past
+        const hostedEvents = await prisma.event.findMany({
+            where: {
+                hostId: userId,
+                date: { lt: now },
+                isDeleted: false
+            },
+            include: { attendees: true }
+        });
+        // Find events where user is an attendee and date is in the past
+        const attendedEvents = await prisma.attendee.findMany({
+            where: {
+                userId,
+                event: { date: { lt: now }, isDeleted: false }
+            },
+            include: { event: { include: { attendees: true } } }
+        });
+        // Format attended events to match hostedEvents structure
+        const attendedEventsFormatted = attendedEvents.map(a => ({ ...a.event, role: 'ATTENDEE' }));
+        const hostedEventsFormatted = hostedEvents.map(e => ({ ...e, role: 'HOST' }));
+        // Merge and sort by date descending
+        const allPastEvents = [...hostedEventsFormatted, ...attendedEventsFormatted].sort((a, b) => b.date.getTime() - a.date.getTime());
+        res.status(200).json(allPastEvents);
+    } catch (error) {
+        console.error('Error fetching past events for user:', error);
+        res.status(500).json({ message: 'Failed to fetch past events.' });
+    }
+});
+
 export default router;

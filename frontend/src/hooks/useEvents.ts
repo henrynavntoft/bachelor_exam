@@ -24,52 +24,48 @@ interface EventsResponse {
 export function useEvents(limit = 6) {
     const query = useInfiniteQuery<EventsResponse>({
         queryKey: ["events"],
-        queryFn: async ({ pageParam = undefined }) => {
+        queryFn: async ({ pageParam }) => {
             try {
                 const res = await axiosInstance.get(routes.events.all, {
-                    params: {
-                        limit,
-                        cursor: pageParam
-                    },
+                    params: pageParam ? { limit, cursor: pageParam } : { limit },
                     withCredentials: true
                 });
 
-                // Safely handle different API response structures
                 const responseData = res.data;
 
-                // Check if the response has the expected structure
-                if (responseData && typeof responseData === 'object') {
-                    // Handle case where response is { events: [...] }
-                    if (Array.isArray(responseData.events)) {
-                        return {
-                            events: responseData.events,
-                            nextCursor: responseData.nextCursor
-                        };
-                    }
-
-                    // Handle case where response is directly an array
-                    if (Array.isArray(responseData)) {
-                        return {
-                            events: responseData,
-                            nextCursor: undefined
-                        };
-                    }
+                // Handle different response structures safely
+                if (responseData && Array.isArray(responseData.events)) {
+                    return {
+                        events: responseData.events,
+                        nextCursor: responseData.nextCursor
+                    };
                 }
 
-                // If we can't determine the structure, return empty events
-                console.error('Unexpected API response structure:', responseData);
-                return { events: [] };
+                if (Array.isArray(responseData)) {
+                    return {
+                        events: responseData,
+                        nextCursor: undefined
+                    };
+                }
+
+                // Fallback for unexpected structure
+                return { events: [], nextCursor: undefined };
             } catch (error) {
                 console.error('Error fetching events:', error);
-                return { events: [] };
+                return { events: [], nextCursor: undefined };
             }
         },
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: undefined,
     });
 
-    // Flatten all events from all pages for easy consumption
-    const allEvents = query.data?.pages?.flatMap(page => page.events || []) || [];
+    // Safely extract all events
+    const allEvents = query.data?.pages?.reduce<Event[]>((acc, page) => {
+        if (page?.events && Array.isArray(page.events)) {
+            return [...acc, ...page.events];
+        }
+        return acc;
+    }, []) ?? [];
 
     return {
         ...query,

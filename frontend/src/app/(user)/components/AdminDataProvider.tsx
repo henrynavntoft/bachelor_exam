@@ -59,7 +59,7 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
         isLoading: eventsLoading,
         error: eventsError
     } = useQuery<Event[]>({
-        queryKey: ['events'],
+        queryKey: ['admin-events'],
         queryFn: async () => {
             try {
                 const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
@@ -97,7 +97,7 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
             await axiosInstance.delete(routes.events.delete(id), { withCredentials: true });
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['events'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-events'] });
         }
     });
 

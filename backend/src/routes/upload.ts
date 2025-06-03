@@ -69,7 +69,7 @@ router.post(
 );
 
 //////////////////////////////////////////////////////////////////////////////////
-// POST: Upload multiple images
+// DELETE: Delete uploaded images
 router.delete(
     '/:id',
     authorize(['EVENT_OWNER']),

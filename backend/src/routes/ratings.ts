@@ -7,7 +7,7 @@ import { ZodError, ZodIssue } from 'zod';
 const router = Router();
 
 // POST: Create a new rating for a user
-router.post('/users/:userId/ratings', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/:userId/ratings', authorize(), async (req: AuthenticatedRequest, res: Response) => {
     // Validate userId param
     let params: UserIdParam;
     try {
@@ -131,7 +131,7 @@ router.post('/users/:userId/ratings', authorize(), async (req: AuthenticatedRequ
 });
 
 // GET: Get all ratings for a specific user
-router.get('/users/:userId/ratings', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:userId/ratings', authorize(), async (req: AuthenticatedRequest, res: Response) => {
     // Validate userId param
     let params: UserIdParam;
     try {
@@ -181,7 +181,7 @@ router.get('/users/:userId/ratings', authorize(), async (req: AuthenticatedReque
 });
 
 // GET: Get average rating for a specific user
-router.get('/users/:userId/ratings/average', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:userId/ratings/average', authorize(), async (req: AuthenticatedRequest, res: Response) => {
     // Validate userId param
     let params: UserIdParam;
     try {
@@ -228,7 +228,7 @@ router.get('/users/:userId/ratings/average', authorize(), async (req: Authentica
 });
 
 // GET: Get all ratings given by a specific user
-router.get('/users/:userId/ratings/given', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/:userId/ratings/given', authorize(), async (req: AuthenticatedRequest, res: Response) => {
     // Validate userId param
     let params: UserIdParam;
     try {

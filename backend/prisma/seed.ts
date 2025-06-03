@@ -16,6 +16,7 @@ async function main() {
             profilePicture: 'https://robohash.org/BKM.png?set=set1',
             hashedPassword: adminPassword,
             role: 'ADMIN',
+            isVerified: true,
         },
     });
 
@@ -25,7 +26,7 @@ async function main() {
 main()
     .catch((e) => {
         console.error(e);
-        process.exit(1);
+        throw e;
     })
     .finally(() => {
         prisma.$disconnect();

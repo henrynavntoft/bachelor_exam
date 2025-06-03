@@ -20,6 +20,7 @@ export const routes = {
         attend: (id: string) => `${API_BASE}/events/${id}/attend`,
         cancelAttend: (id: string) => `${API_BASE}/events/${id}/attend`,
         attendees: (id: string) => `${API_BASE}/events/${id}/attendees`,
+        userPastEvents: (id: string) => `${API_BASE}/events/users/${id}/past-events`,
     },
     users: {
         all: `${API_BASE}/users`,
@@ -27,7 +28,6 @@ export const routes = {
         delete: (id: string) => `${API_BASE}/users/${id}`,
         update: (id: string) => `${API_BASE}/users/${id}`,
         updateProfile: (id: string) => `${API_BASE}/users/${id}`,
-        pastEvents: (id: string) => `${API_BASE}/users/${id}/past-events`,
         ratings: (id: string) => `${API_BASE}/users/${id}/ratings`,
         averageRating: (id: string) => `${API_BASE}/users/${id}/ratings/average`,
         ratingsGiven: (id: string) => `${API_BASE}/users/${id}/ratings/given`,

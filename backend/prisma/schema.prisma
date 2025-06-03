@@ -6,8 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  seed     = "seed.ts"
-  output   = "../node_modules/.prisma/client"
 }
 
 datasource db {
@@ -99,7 +97,7 @@ model Event {
   updatedAt      DateTime   @updatedAt
   isDeleted      Boolean    @default(false)
   messages       Message[]
-  Rating         Rating[]
+  ratings        Rating[]
 }
 
 model Attendee {
@@ -110,6 +108,8 @@ model Attendee {
   user      User     @relation(fields: [userId], references: [id])
   event     Event    @relation(fields: [eventId], references: [id])
   createdAt DateTime @default(now())
+
+  @@unique([userId, eventId]) // A user can only RSVP to an event once
 }
 
 model Message {

@@ -16,14 +16,19 @@ export default function Home() {
   const [showMobileMap, setShowMobileMap] = useState(false);
   const { user: currentUser, isLoading: authIsLoading } = useAuth();
 
+  const eventsQuery = useEvents(6); // Fetch 6 events per page
+  
   const {
-    allEvents,
+    allEvents = [],
     isLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     error
-  } = useEvents(6); // Fetch 6 events per page
+  } = eventsQuery || {};
+
+  // Ensure allEvents is always an array
+  const safeAllEvents = Array.isArray(allEvents) ? allEvents : [];
 
   if (isLoading || authIsLoading) {
     return <LoadingSpinner />;
@@ -52,19 +57,19 @@ export default function Home() {
             <MapToggle onShowMap={() => setShowMobileMap(true)} />
           </div>
 
-          <EventGrid events={allEvents} currentUser={currentUser as User} />
+          <EventGrid events={safeAllEvents} currentUser={currentUser as User} />
 
           <InfiniteLoader
             fetchNextPage={fetchNextPage}
             hasNextPage={hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
-            itemCount={allEvents.length}
+            itemCount={safeAllEvents.length}
           />
         </div>
 
         {/* Map - Hidden on mobile */}
         <div className="hidden lg:block sticky top-4 h-[calc(100vh-2rem)]">
-          <Map events={allEvents} />
+          <Map events={safeAllEvents} />
         </div>
       </article>
 
@@ -72,7 +77,7 @@ export default function Home() {
       <MobileMap
         isVisible={showMobileMap}
         onClose={() => setShowMobileMap(false)}
-        events={allEvents}
+        events={safeAllEvents}
       />
     </>
   );

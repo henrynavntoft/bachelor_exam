@@ -30,34 +30,79 @@ const baseEmailTemplate = `
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
     .email-container {
       max-width: 600px;
       margin: 0 auto;
       padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #ffffff;
       line-height: 1.6;
-      color: #333;
+      color: #333333;
     }
     .header {
       text-align: center;
       margin-bottom: 30px;
+      border-bottom: 2px solid #1a6258;
+      padding-bottom: 20px;
+    }
+    .header h1 {
+      color: #1a6258;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
     }
     .content {
       background: #f9f9f9;
       padding: 30px;
       margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #e1e1e1;
+    }
+    .content p {
+      margin: 0 0 15px 0;
+      color: #333333;
     }
     .button {
       display: inline-block;
       background-color: #1a6258;
-      color: white;
+      color: #ffffff !important;
       text-decoration: none;
-      padding: 12px 25px;
-      font-weight: bold;
+      padding: 15px 30px;
+      font-weight: 600;
+      border-radius: 6px;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
     }
-    a {
-      color: white;
+    .button:hover {
+      background-color: #145248 !important;
+    }
+    .button:visited,
+    .button:active {
+      color: #ffffff !important;
+    }
+    a.button {
+      color: #ffffff !important;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e1e1e1;
+      color: #666666;
+      font-size: 14px;
+    }
+    /* Override email client default link colors */
+    a[x-apple-data-detectors] {
+      color: inherit !important;
+      text-decoration: none !important;
     }
   </style>
 </head>
@@ -68,6 +113,9 @@ const baseEmailTemplate = `
     </div>
     <div class="content">
       {{content}}
+    </div>
+    <div class="footer">
+      <p>This email was sent automatically. Please do not reply to this email.</p>
     </div>
   </div>
 </body>
