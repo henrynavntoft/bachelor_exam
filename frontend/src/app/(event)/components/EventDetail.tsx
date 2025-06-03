@@ -157,12 +157,12 @@ export function EventDetail({
                                 className="w-full"
                             >
                                 <CarouselContent className="-ml-2 md:-ml-4">
-                                    {event.images.map((image, index) => (
-                                        <CarouselItem key={index} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                                    {event.images.map((image) => (
+                                        <CarouselItem key={image.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
                                             <div className="aspect-square overflow-hidden rounded-lg">
                                                 <Image
-                                                    src={image}
-                                                    alt={`${event.title} - Image ${index + 1}`}
+                                                    src={image.imageUrl}
+                                                    alt={image.altText || `${event.title} - Image`}
                                                     width={800}
                                                     height={800}
                                                     className="w-full h-full object-cover"

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 
 import userRoutes from './routes/users';
 import eventRoutes from './routes/events';
+import eventImageRoutes from './routes/eventImages';
 import authRoutes from './routes/auth';
 import uploadRoute from './routes/upload';
 import ratingsRouter from './routes/ratings';
@@ -34,6 +35,7 @@ app.get('/', (req: Request, res: Response) => {
 
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/event-images', eventImageRoutes);
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/upload', uploadRoute);
 app.use('/api/users', ratingsRouter);

@@ -50,6 +50,15 @@ router.get('/', async (req: Request, res: Response) => {
                         profilePicture: true,
                     },
                 },
+                images: {
+                    orderBy: { order: 'asc' },
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                        altText: true,
+                        order: true,
+                    }
+                },
                 attendees: {
                     include: {
                         user: {
@@ -101,6 +110,15 @@ router.get('/:id', async (req: Request, res: Response) => {
         const event = await prisma.event.findUnique({
             where: { id },
             include: {
+                images: {
+                    orderBy: { order: 'asc' },
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                        altText: true,
+                        order: true,
+                    }
+                },
                 attendees: {
                     include: {
                         user: {
@@ -148,17 +166,18 @@ router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Res
         }
         throw err;
     }
-    const { title, description, images, date, location, pricePerPerson, eventType, capacity } = body;
+    const { title, description, date, location, pricePerPerson, eventType, capacity } = body;
     try {
         if (!req.user) {
             res.status(401).json({ message: 'Unauthorized' });
             return;
         }
+        
+        // Create event (images will be handled via separate endpoint)
         const event = await prisma.event.create({
             data: {
                 title,
                 description,
-                images,
                 date: new Date(date),
                 location,
                 hostId: req.user.userId,
@@ -167,6 +186,7 @@ router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Res
                 capacity
             },
         });
+
         res.status(201).json(event);
     } catch (error) {
         console.error('Error creating event:', error);
@@ -177,14 +197,13 @@ router.post('/', authorize(['HOST']), async (req: AuthenticatedRequest, res: Res
 //////////////////////////////////////////////////////////////////////////////////
 // PUT: Update an event
 router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest, res: Response) => {
-    // Validate ID param (Still need this validation, even if middleware also does it for EVENT_OWNER check)
-    let params: EventIdParam; // Note: Your middleware handles Zod errors for eventIdParamSchema
+    // Validate ID param
+    let params: EventIdParam;
     try {
         params = eventIdParamSchema.parse(req.params);
     } catch (err: unknown) {
         if (err instanceof ZodError) {
             const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
-            // Middleware might have already sent this for EVENT_OWNER. Safe to keep for robustness.
             if (!res.headersSent) {
                 res.status(400).json({ error: `Invalid parameter: ${errorMessage}` });
             }
@@ -206,21 +225,15 @@ router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest,
         }
         throw err;
     }
-    const { title, description, images, date, location, pricePerPerson, eventType, capacity } = body;
+    const { title, description, date, location, pricePerPerson, eventType, capacity } = body;
 
     try {
-        // REDUNDANT FETCH REMOVED:
-        // const event = await prisma.event.findUnique({ where: { id } });
-        // if (!event) { res.status(404).json({ message: 'Event not found' }); return; }
-        // authorize(['EVENT_OWNER']) ensures the event exists and req.user is the owner (or admin)
-
         // Build partial update payload
         const updateData: Prisma.EventUpdateInput = {};
 
         // Only add fields if they are present in the validated body
         if (title !== undefined) updateData.title = title;
         if (description !== undefined) updateData.description = description;
-        if (images !== undefined) updateData.images = { set: images };
         if (date !== undefined) updateData.date = new Date(date);
         if (location !== undefined) updateData.location = location;
         if (pricePerPerson !== undefined) updateData.pricePerPerson = pricePerPerson;
@@ -237,13 +250,10 @@ router.put('/:id', authorize(['EVENT_OWNER']), async (req: AuthenticatedRequest,
             data: updateData,
         });
 
-        // It's often better to return the updated resource rather than a string
-        // You could fetch the updated event or just return 200 with a success message
-        res.status(200).json({ message: "Event updated successfully" }); // Or fetch and return the event
+        res.status(200).json({ message: "Event updated successfully" });
 
     } catch (error) {
         console.error('Error updating event:', error);
-        // Consider checking error type for specific database errors vs others
         res.status(500).json({ message: 'Failed to update event' });
     }
 });

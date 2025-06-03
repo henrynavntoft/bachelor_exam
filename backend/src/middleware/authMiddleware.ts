@@ -5,6 +5,7 @@ import { prisma } from '../config/prisma';
 import { eventIdParamSchema } from '../schemas/eventSchema'; // Assuming this validates { id: string }
 import { ZodError, ZodIssue } from 'zod';
 import { Role } from '@prisma/client';
+import { z } from 'zod';
 
 // include SELF for user-own resources, EVENT_OWNER for event ownership
 export type AuthRole = Role | 'SELF' | 'EVENT_OWNER';
@@ -104,25 +105,65 @@ export const authorize = (roles: AuthRole[] = []) => {
             // 3. EVENT_OWNER Ownership Check (e.g., modifying an event)
             const allowEventOwner = roles.includes('EVENT_OWNER');
             if (!isAuthorized && allowEventOwner) {
-                // Validate and parse the event ID from params
-                let params;
-                try {
-                    params = eventIdParamSchema.parse(req.params); // Expects { id: string }
-                } catch (err: unknown) {
-                    if (err instanceof ZodError) {
-                        // If the ID param is invalid, it cannot be an event owner check
-                        const message = err.errors.map((i: ZodIssue) => i.message).join(', ');
-                        res.status(400).json({ message: `Invalid parameter: ${message}` });
-                        return; // Stop here as the input is invalid
+                // Try to get event ID from either id or eventId parameter
+                let eventId: string | undefined;
+                
+                // First try req.params.id (for regular event routes)
+                if (req.params.id) {
+                    try {
+                        const params = eventIdParamSchema.parse(req.params);
+                        eventId = params.id;
+                    } catch (err: unknown) {
+                        // If id param is invalid, check eventId param
+                        if (req.params.eventId) {
+                            try {
+                                const eventIdSchema = z.object({
+                                    eventId: z.string().uuid({ message: 'Invalid event ID' })
+                                });
+                                const params = eventIdSchema.parse(req.params);
+                                eventId = params.eventId;
+                            } catch (eventIdErr: unknown) {
+                                if (eventIdErr instanceof ZodError) {
+                                    const message = eventIdErr.errors.map((i: ZodIssue) => i.message).join(', ');
+                                    res.status(400).json({ message: `Invalid parameter: ${message}` });
+                                    return;
+                                }
+                                throw eventIdErr;
+                            }
+                        } else {
+                            if (err instanceof ZodError) {
+                                const message = err.errors.map((i: ZodIssue) => i.message).join(', ');
+                                res.status(400).json({ message: `Invalid parameter: ${message}` });
+                                return;
+                            }
+                            throw err;
+                        }
                     }
-                    // Re-throw other unexpected errors
-                    throw err;
+                }
+                // If no id param, try eventId param (for event-images routes)
+                else if (req.params.eventId) {
+                    try {
+                        const eventIdSchema = z.object({
+                            eventId: z.string().uuid({ message: 'Invalid event ID' })
+                        });
+                        const params = eventIdSchema.parse(req.params);
+                        eventId = params.eventId;
+                    } catch (err: unknown) {
+                        if (err instanceof ZodError) {
+                            const message = err.errors.map((i: ZodIssue) => i.message).join(', ');
+                            res.status(400).json({ message: `Invalid parameter: ${message}` });
+                            return;
+                        }
+                        throw err;
+                    }
                 }
 
-                // Find the event and check if the authenticated user is the host
-                const event = await prisma.event.findUnique({ where: { id: params.id } });
-                if (event && event.hostId === decoded.userId) {
-                    isAuthorized = true;
+                if (eventId) {
+                    // Find the event and check if the authenticated user is the host
+                    const event = await prisma.event.findUnique({ where: { id: eventId } });
+                    if (event && event.hostId === decoded.userId) {
+                        isAuthorized = true;
+                    }
                 }
                 // Note: If event is not found, or user is not host, isAuthorized remains false.
                 // The final check will handle denying access if needed.

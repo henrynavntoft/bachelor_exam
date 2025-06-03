@@ -22,6 +22,12 @@ export const routes = {
         attendees: (id: string) => `${API_BASE}/events/${id}/attendees`,
         userPastEvents: (id: string) => `${API_BASE}/events/users/${id}/past-events`,
     },
+    eventImages: {
+        all: (eventId: string) => `${API_BASE}/event-images/${eventId}`,
+        create: (eventId: string) => `${API_BASE}/event-images/${eventId}`,
+        update: (eventId: string, imageId: string) => `${API_BASE}/event-images/${eventId}/${imageId}`,
+        delete: (eventId: string, imageId: string) => `${API_BASE}/event-images/${eventId}/${imageId}`,
+    },
     users: {
         all: `${API_BASE}/users`,
         one: (id: string) => `${API_BASE}/users/${id}`,

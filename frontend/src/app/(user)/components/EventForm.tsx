@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { MapboxLocationInput } from "@/app/components/home/MapboxLocationInput";
 import { eventSchema, EventFormData, ExtendedEventFormData } from "@/lib/schemas/event.schemas";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EventImage } from "@/lib/types/event";
 
 // Define EventType enum values for Select component
 const eventTypes = ["BREAKFAST", "LUNCH", "DINNER", "SPECIAL"] as const;
@@ -19,7 +20,7 @@ interface EventFormProps {
     initialData?: Partial<EventFormData> & { id?: string };
     onSubmit: (data: ExtendedEventFormData) => Promise<void>;
     onCancel: () => void;
-    existingImages?: string[];
+    existingImages?: EventImage[];
     onImageDelete?: (url: string) => void;
     isEditing?: boolean;
 }
@@ -61,13 +62,9 @@ export function EventForm({
     };
 
     const handleSubmit = async (data: EventFormData) => {
-        // Filter out any images that were marked for deletion
-        const updatedImages = existingImages?.filter(img => !imagesToDelete.includes(img)) || [];
-
-        // Include the updated images list and the list of images to delete
+        // Include the list of images to delete
         await onSubmit({
             ...data,
-            images: updatedImages,
             _imagesToDelete: imagesToDelete
         } as ExtendedEventFormData);
     };
@@ -134,13 +131,19 @@ export function EventForm({
                 {isEditing && existingImages.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                         {existingImages
-                            .filter(img => !imagesToDelete.includes(img))
+                            .filter(img => !imagesToDelete.includes(img.imageUrl))
                             .map(img => (
-                                <div key={img} className="relative">
-                                    <Image src={img} alt="existing" width={80} height={80} className="rounded" />
+                                <div key={img.id} className="relative">
+                                    <Image 
+                                        src={img.imageUrl} 
+                                        alt={img.altText || "Event image"} 
+                                        width={80} 
+                                        height={80} 
+                                        className="rounded object-cover" 
+                                    />
                                     <button
                                         type="button"
-                                        onClick={() => handleRemoveImage(img)}
+                                        onClick={() => handleRemoveImage(img.imageUrl)}
                                         className="absolute top-0 right-0 bg-red-500 text-white text-xs px-1 rounded cursor-pointer"
                                     >
                                         ✕

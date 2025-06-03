@@ -66,10 +66,7 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
                 pricePerPerson: data.pricePerPerson,
                 eventType: data.eventType,
                 capacity: data.capacity,
-                images: data.images || [], // Existing image URLs (e.g. if editing and re-using schema)
-                // newImages should NOT be in this initial JSON payload as they are File objects
-                // and the backend createEventSchema no longer expects raw files in the initial creation step.
-                // data.newImages (if any) will be used for the separate upload process after event creation.
+                // No images in initial creation - handled separately
             };
 
             const res = await axiosInstance.post(
@@ -79,27 +76,33 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
             );
             const newEventId = res.data.id;
 
-            let uploadedUrls: string[] = [];
+            // Handle image uploads using the new event-images API
             if (data.newImages && data.newImages.length > 0) {
-                const ups = data.newImages.map(async (file: File) => {
+                for (let i = 0; i < data.newImages.length; i++) {
+                    const file = data.newImages[i];
                     const fd = new FormData();
                     fd.append('image', file);
-                    const up = await axiosInstance.post(
+                    
+                    // Upload image to get URL
+                    const uploadResponse = await axiosInstance.post(
                         routes.upload.upload(newEventId),
                         fd,
                         { headers: { 'Content-Type': 'multipart/form-data' } }
                     );
-                    return up.data.url || up.data.location;
-                });
-                uploadedUrls = await Promise.all(ups);
-            }
-
-            if (uploadedUrls.length) {
-                await axiosInstance.put(
-                    routes.events.update(newEventId),
-                    { images: uploadedUrls },
-                    { withCredentials: true }
-                );
+                    
+                    const imageUrl = uploadResponse.data.url || uploadResponse.data.location;
+                    
+                    // Add image to event using new API
+                    await axiosInstance.post(
+                        routes.eventImages.create(newEventId),
+                        {
+                            imageUrl: imageUrl,
+                            altText: `${data.title} - Image ${i + 1}`,
+                            order: i
+                        },
+                        { withCredentials: true }
+                    );
+                }
             }
 
             await queryClient.invalidateQueries({ queryKey: ['host-events', user.id] });
@@ -120,15 +123,27 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
                 throw new Error('Event not found');
             }
 
+            // Handle image deletions using the new API
             if ((data as ExtendedEventFormData)._imagesToDelete && (data as ExtendedEventFormData)._imagesToDelete!.length > 0) {
                 for (const imgUrl of (data as ExtendedEventFormData)._imagesToDelete!) {
                     try {
-                        const imageKey = imgUrl.split('/').pop();
-                        if (imageKey) {
+                        // Find the image by URL in the current event
+                        const imageToDelete = currentEvent.images?.find(img => img.imageUrl === imgUrl);
+                        if (imageToDelete) {
+                            // Delete from event-images API
                             await axiosInstance.delete(
-                                routes.upload.delete(selectedEventId),
-                                { data: { key: imageKey }, withCredentials: true }
+                                routes.eventImages.delete(selectedEventId, imageToDelete.id),
+                                { withCredentials: true }
                             );
+                            
+                            // Delete from storage
+                            const imageKey = imgUrl.split('/').pop();
+                            if (imageKey) {
+                                await axiosInstance.delete(
+                                    routes.upload.delete(selectedEventId),
+                                    { data: { key: imageKey }, withCredentials: true }
+                                );
+                            }
                         }
                     } catch (err) {
                         console.error('Failed to delete image:', err);
@@ -136,32 +151,43 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
                 }
             }
 
-            let uploadedUrls: string[] = [];
+            // Handle new image uploads
             if (data.newImages && data.newImages.length > 0) {
-                const ups = data.newImages.map(async (file: File) => {
+                const existingImageCount = currentEvent.images?.length || 0;
+                
+                for (let i = 0; i < data.newImages.length; i++) {
+                    const file = data.newImages[i];
                     const fd = new FormData();
                     fd.append('image', file);
-                    const up = await axiosInstance.post(
+                    
+                    // Upload image to get URL
+                    const uploadResponse = await axiosInstance.post(
                         routes.upload.upload(selectedEventId),
                         fd,
                         { headers: { 'Content-Type': 'multipart/form-data' } }
                     );
-                    return up.data.url || up.data.location;
-                });
-                uploadedUrls = await Promise.all(ups);
+                    
+                    const imageUrl = uploadResponse.data.url || uploadResponse.data.location;
+                    
+                    // Add image to event using new API
+                    await axiosInstance.post(
+                        routes.eventImages.create(selectedEventId),
+                        {
+                            imageUrl: imageUrl,
+                            altText: `${data.title} - Image`,
+                            order: existingImageCount + i
+                        },
+                        { withCredentials: true }
+                    );
+                }
             }
 
-            const existingImagesNotDeleted = currentEvent.images?.filter(
-                img => !(data as ExtendedEventFormData)._imagesToDelete?.includes(img)
-            ) || [];
-            const finalImages = [...existingImagesNotDeleted, ...uploadedUrls];
-
+            // Update event basic fields (no images)
             const updatePayload = {
                 title: data.title,
                 description: data.description,
                 date: new Date(data.date),
                 location: data.location,
-                images: finalImages,
                 pricePerPerson: data.pricePerPerson,
                 eventType: data.eventType,
                 capacity: data.capacity,

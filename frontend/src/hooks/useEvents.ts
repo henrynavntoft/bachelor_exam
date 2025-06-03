@@ -3,12 +3,13 @@ import axiosInstance from "@/lib/axios";
 import { routes } from "@/lib/routes";
 import { User } from '@/lib/types/user';
 import { Attendee } from '@/lib/types/attendee';
+import { EventImage } from '@/lib/types/event';
 
 export interface Event {
     id: string;
     title: string;
     description: string;
-    images: string[];
+    images: EventImage[];
     date: string;
     location: string;
     hostId: string;

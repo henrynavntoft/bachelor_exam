@@ -1,8 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// ============================================================================
+// PRISMA SCHEMA - BACHELOR EXAM PROJECT
+// ============================================================================
+// This schema follows Third Normal Form (3NF) principles for optimal 
+// data integrity and normalization.
+//
+// Database: PostgreSQL
+// ORM: Prisma
+// ============================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -13,111 +17,191 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// ENUMS - Application-wide constants
+// ============================================================================
+
+/// User roles in the system
 enum Role {
-  GUEST
-  HOST
-  ADMIN
+  GUEST /// Regular user who can attend events
+  HOST /// User who can create and host events  
+  ADMIN /// Administrator with full system access
 }
 
+/// Categories of events available in the system
 enum EventType {
-  BREAKFAST
-  LUNCH
-  DINNER
-  SPECIAL
+  BREAKFAST /// Morning meal events
+  LUNCH /// Midday meal events
+  DINNER /// Evening meal events
+  SPECIAL /// Special occasion events
 }
 
+// ============================================================================
+// CORE ENTITIES - Main business objects
+// ============================================================================
+
+/// Core user entity containing authentication and profile information
 model User {
-  id                 String                   @id @default(uuid())
-  firstName          String
-  lastName           String
-  email              String                   @unique
-  hashedPassword     String
-  profilePicture     String?
-  role               Role                     @default(GUEST)
-  isVerified         Boolean                  @default(false)
+  id             String   @id @default(uuid())
+  firstName      String
+  lastName       String
+  email          String   @unique
+  hashedPassword String
+  profilePicture String?
+  role           Role     @default(GUEST)
+  isVerified     Boolean  @default(false)
+  isDeleted      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // ========================================================================
+  // RELATIONSHIPS - User connections to other entities
+  // ========================================================================
+
+  /// Events hosted by this user
   hostedEvents       Event[]                  @relation("HostEvents")
-  attendingEvents    Attendee[] // guests attending events
-  createdAt          DateTime                 @default(now())
-  updatedAt          DateTime                 @updatedAt
-  isDeleted          Boolean                  @default(false)
-  resetTokens        PasswordResetToken[]
-  verificationTokens EmailVerificationToken[]
+  /// Events this user is attending
+  attendingEvents    Attendee[]
+  /// Messages sent by this user
   messages           Message[]
+  /// Ratings this user has received
   ratingsReceived    Rating[]                 @relation("RatingsReceived")
+  /// Ratings this user has given
   ratingsGiven       Rating[]                 @relation("RatingsGiven")
+  /// Password reset tokens for this user
+  resetTokens        PasswordResetToken[]
+  /// Email verification tokens for this user
+  verificationTokens EmailVerificationToken[]
 }
 
-model EmailVerificationToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model Rating {
-  id          String   @id @default(uuid())
-  rating      Int // Should be validated in application logic to be between 1-10
-  comment     String?
-  ratedUserId String
-  ratedUser   User     @relation("RatingsReceived", fields: [ratedUserId], references: [id])
-  raterUserId String
-  raterUser   User     @relation("RatingsGiven", fields: [raterUserId], references: [id])
-  eventId     String // Link to the specific event for which the rating is given
-  event       Event    @relation(fields: [eventId], references: [id])
-  createdAt   DateTime @default(now())
-
-  @@unique([ratedUserId, raterUserId, eventId]) // A user can only rate another user once per event
-}
-
+/// Event entity representing social dining events
 model Event {
-  id             String     @id @default(uuid())
+  id             String    @id @default(uuid())
   title          String
   description    String
-  images         String[]
   date           DateTime
   location       String
-  capacity       Int? // Max number of attendees
-  pricePerPerson Float? // Optional price per person
-  eventType      EventType  @default(SPECIAL) // Type of event (e.g., BREAKFAST, LUNCH, DINNER, SPECIAL)
+  capacity       Int? /// Maximum number of attendees (null = unlimited)
+  pricePerPerson Float? /// Cost per person (null = free event)
+  eventType      EventType @default(SPECIAL)
   hostId         String
-  host           User       @relation("HostEvents", fields: [hostId], references: [id])
-  attendees      Attendee[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  isDeleted      Boolean    @default(false)
-  messages       Message[]
-  ratings        Rating[]
+  isDeleted      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // ========================================================================
+  // RELATIONSHIPS - Event connections to other entities
+  // ========================================================================
+
+  /// The user hosting this event
+  host      User         @relation("HostEvents", fields: [hostId], references: [id])
+  /// Users attending this event
+  attendees Attendee[]
+  /// Images associated with this event (normalized for 3NF)
+  images    EventImage[]
+  /// Messages in this event's chat
+  messages  Message[]
+  /// Ratings given for this event
+  ratings   Rating[]
 }
 
+// ============================================================================
+// JUNCTION TABLES - Many-to-many relationships
+// ============================================================================
+
+/// Junction table for User-Event attendance relationship
 model Attendee {
   id        String   @id @default(uuid())
   userId    String
   eventId   String
-  quantity  Int      @default(1) // Number of spots this attendance record represents
-  user      User     @relation(fields: [userId], references: [id])
-  event     Event    @relation(fields: [eventId], references: [id])
+  quantity  Int      @default(1) /// Number of spots reserved
   createdAt DateTime @default(now())
 
-  @@unique([userId, eventId]) // A user can only RSVP to an event once
+  /// The user attending the event
+  user  User  @relation(fields: [userId], references: [id])
+  /// The event being attended
+  event Event @relation(fields: [eventId], references: [id])
+
+  /// Ensure a user can only RSVP once per event
+  @@unique([userId, eventId])
 }
 
+/// Rating system for users based on event participation
+model Rating {
+  id          String   @id @default(uuid())
+  rating      Int /// Rating value (1-10, validated in application)
+  comment     String? /// Optional comment with the rating
+  ratedUserId String /// User being rated
+  raterUserId String /// User giving the rating
+  eventId     String /// Event context for the rating
+  createdAt   DateTime @default(now())
+
+  /// User receiving the rating
+  ratedUser User  @relation("RatingsReceived", fields: [ratedUserId], references: [id])
+  /// User giving the rating
+  raterUser User  @relation("RatingsGiven", fields: [raterUserId], references: [id])
+  /// Event where the rating occurred
+  event     Event @relation(fields: [eventId], references: [id])
+
+  /// Ensure one rating per user pair per event
+  @@unique([ratedUserId, raterUserId, eventId])
+}
+
+// ============================================================================
+// SUPPORTING ENTITIES - Normalized supporting data
+// ============================================================================
+
+/// Normalized table for event images (3NF compliance)
+model EventImage {
+  id        String   @id @default(uuid())
+  eventId   String
+  imageUrl  String /// URL or path to the image
+  altText   String? /// Alternative text for accessibility
+  order     Int      @default(0) /// Display order of images
+  createdAt DateTime @default(now())
+
+  /// The event this image belongs to
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+/// Chat messages for event discussions
 model Message {
   id        String   @id @default(uuid())
   content   String
-  createdAt DateTime @default(now())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   eventId   String
-  event     Event    @relation(fields: [eventId], references: [id])
+  createdAt DateTime @default(now())
+
+  /// User who sent the message
+  user  User  @relation(fields: [userId], references: [id])
+  /// Event this message belongs to
+  event Event @relation(fields: [eventId], references: [id])
+}
+
+// ============================================================================
+// SECURITY TOKENS - Authentication and verification
+// ============================================================================
+
+/// Tokens for email verification process
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  /// User this verification token belongs to
+  user User @relation(fields: [userId], references: [id])
+}
+
+/// Tokens for password reset functionality
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  /// User this reset token belongs to
+  user User @relation(fields: [userId], references: [id])
 }

@@ -2,11 +2,19 @@ import { User } from './user';
 import { Attendee } from './attendee'; // Will be created next
 import { Message } from './message'; // Will be created next
 
+export interface EventImage {
+    id: string;
+    imageUrl: string;
+    altText?: string | null;
+    order: number;
+    createdAt?: string;
+}
+
 export interface Event {
     id: string;
     title: string;
     description: string;
-    images: string[];
+    images: EventImage[]; // Updated to use EventImage objects instead of string[]
     date: string; // Dates as strings for frontend
     location: string;
     hostId: string;

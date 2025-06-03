@@ -75,8 +75,8 @@ export function EventCard({
                 {event?.images && Array.isArray(event.images) && event.images[0] ? (
                     <div className={`relative w-full ${featuredImageHeight} mb-2`}>
                         <Image
-                            src={event.images[0]}
-                            alt={event.title || 'Event'}
+                            src={event.images[0].imageUrl}
+                            alt={event.images[0].altText || event.title || 'Event'}
                             fill
                             className={`object-cover ${isPastEvent ? 'grayscale' : ''}`}
                         />
@@ -102,8 +102,15 @@ export function EventCard({
                 )}
                 {showImageGallery && event.images && event.images.length > 1 && (
                     <div className="flex flex-wrap gap-2 mb-2">
-                        {event.images.slice(1).map((img: string) => (
-                            <Image key={img} src={img} alt={event.title} width={60} height={60} />
+                        {event.images.slice(1).map((img) => (
+                            <Image 
+                                key={img.id} 
+                                src={img.imageUrl} 
+                                alt={img.altText || event.title} 
+                                width={60} 
+                                height={60} 
+                                className="rounded object-cover"
+                            />
                         ))}
                     </div>
                 )}
