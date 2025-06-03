@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Param schema for user ID (expects a UUID)
 export const userIdParamSchema = z.object({
-    id: z.string().uuid('Invalid user ID'),
+    userId: z.string().uuid('Invalid user ID'),
 });
 export type UserIdParam = z.infer<typeof userIdParamSchema>;
 

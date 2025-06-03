@@ -14,7 +14,8 @@ import { EventFormData, ExtendedEventFormData } from '@/lib/schemas/event.schema
 interface HostDataProviderProps {
     children: (data: {
         currentUser: User | null; // To pass to HostDashboard
-        events: Event[];
+        upcomingEvents: Event[];
+        pastEvents: Event[];
         isCreating: boolean;
         selectedEventId: string | null;
         setIsCreating: (isCreating: boolean) => void;
@@ -33,15 +34,22 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
 
-    const { data: events = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
+    const { data: eventsData = { upcomingEvents: [], pastEvents: [] }, isLoading: isLoadingEvents } = useQuery<{ upcomingEvents: Event[], pastEvents: Event[] }>({
         queryKey: ['host-events', user?.id], // Include user?.id in queryKey if events are user-specific
         queryFn: async () => {
-            if (!user) return []; // Or handle appropriately if user must be present
+            if (!user) return { upcomingEvents: [], pastEvents: [] }; // Or handle appropriately if user must be present
             // Assuming routes.events.all fetches events for the currently authenticated host
             // If you need to pass hostId specifically, adjust the API call
-            const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
+            const res = await axiosInstance.get(`${routes.events.all}?includePast=true`, { withCredentials: true });
             // Filter events to only those hosted by the current user IF the API doesn't do it
-            return (res.data.events || []).filter((event: Event) => event.hostId === user.id);
+            const userEvents = (res.data.events || []).filter((event: Event) => event.hostId === user.id);
+            
+            // Separate events into upcoming and past
+            const now = new Date();
+            const upcomingEvents = userEvents.filter((event: Event) => new Date(event.date) >= now);
+            const pastEvents = userEvents.filter((event: Event) => new Date(event.date) < now);
+            
+            return { upcomingEvents, pastEvents };
         },
         enabled: !!user, // Only run if user is loaded
     });
@@ -107,7 +115,7 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
         if (!selectedEventId || !user) return;
 
         try {
-            const currentEvent = events.find(ev => ev.id === selectedEventId);
+            const currentEvent = eventsData.upcomingEvents.find(ev => ev.id === selectedEventId) || eventsData.pastEvents.find(ev => ev.id === selectedEventId);
             if (!currentEvent) {
                 throw new Error('Event not found');
             }
@@ -186,13 +194,14 @@ export function HostDataProvider({ children }: HostDataProviderProps) {
         }
     }
 
-    if (isLoadingEvents && !events.length) { // Show spinner if loading and no events yet displayed
+    if (isLoadingEvents && !eventsData.upcomingEvents.length && !eventsData.pastEvents.length) { // Show spinner if loading and no events yet displayed
         return <LoadingSpinner />;
     }
 
     return children({
         currentUser: user as User,
-        events,
+        upcomingEvents: eventsData.upcomingEvents,
+        pastEvents: eventsData.pastEvents,
         isCreating,
         selectedEventId,
         setIsCreating,

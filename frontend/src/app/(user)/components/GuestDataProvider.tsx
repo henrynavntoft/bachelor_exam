@@ -17,7 +17,8 @@ export interface RsvpedEvent extends Event {
 interface GuestDataProviderProps {
     children: (data: {
         currentUser: User | null;
-        rsvpedEvents: RsvpedEvent[];
+        upcomingEvents: RsvpedEvent[];
+        pastEvents: RsvpedEvent[];
         isLoadingEvents: boolean;
     }) => ReactNode;
 }
@@ -26,11 +27,11 @@ export function GuestDataProvider({ children }: GuestDataProviderProps) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
-    const { data: rsvpedEvents = [], isLoading: isLoadingEvents } = useQuery<RsvpedEvent[]>({
+    const { data: eventsData = { upcomingEvents: [], pastEvents: [] }, isLoading: isLoadingEvents } = useQuery<{ upcomingEvents: RsvpedEvent[], pastEvents: RsvpedEvent[] }>({
         queryKey: ["rsvpedEvents", user?.id],
         queryFn: async () => {
-            if (!user) return [];
-            const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
+            if (!user) return { upcomingEvents: [], pastEvents: [] };
+            const res = await axiosInstance.get(`${routes.events.all}?includePast=true`, { withCredentials: true });
             const allEvents: Event[] = res.data.events || [];
 
             const userRsvpedEvents: RsvpedEvent[] = [];
@@ -43,7 +44,13 @@ export function GuestDataProvider({ children }: GuestDataProviderProps) {
                     });
                 }
             }
-            return userRsvpedEvents;
+
+            // Separate events into upcoming and past
+            const now = new Date();
+            const upcomingEvents = userRsvpedEvents.filter(event => new Date(event.date) >= now);
+            const pastEvents = userRsvpedEvents.filter(event => new Date(event.date) < now);
+
+            return { upcomingEvents, pastEvents };
         },
         enabled: !!user,
     });
@@ -74,7 +81,8 @@ export function GuestDataProvider({ children }: GuestDataProviderProps) {
 
     return children({
         currentUser: user as User,
-        rsvpedEvents,
+        upcomingEvents: eventsData.upcomingEvents,
+        pastEvents: eventsData.pastEvents,
         isLoadingEvents,
     });
 } 

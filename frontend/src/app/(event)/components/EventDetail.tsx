@@ -67,7 +67,11 @@ export function EventDetail({
     const [isAttendModalOpen, setIsAttendModalOpen] = useState(false);
     const queryClient = useQueryClient();
 
+    // Check if event is in the past
+    const isPastEvent = new Date(event.date) < new Date();
+
     const handleAttendClick = async () => {
+        if (isPastEvent) return; // Don't allow attending past events
         if (isUserAttending) {
             setIsCancelConfirmOpen(true);
         } else {
@@ -225,8 +229,8 @@ export function EventDetail({
                         )}
 
                         {/* Action buttons */}
-                        {showActions && isGuest && (
-                            <div className="flex flex-col sm:flex-row gap-4">
+                        {showActions && isGuest && !isPastEvent && (
+                            <div className="flex flex-col gap-4">
                                 {isUserAttending ? (
                                     <AlertDialog open={isCancelConfirmOpen} onOpenChange={setIsCancelConfirmOpen}>
                                         <AlertDialogTrigger asChild>
@@ -271,7 +275,7 @@ export function EventDetail({
                                 )}
 
                                 {/* Chat button - Only show for attendees */}
-                                {isUserAttending && (
+                                {isUserAttending && !isPastEvent && (
                                     <Dialog>
                                         <DialogTrigger asChild>
                                             <Button
@@ -293,6 +297,13 @@ export function EventDetail({
                                         </DialogContent>
                                     </Dialog>
                                 )}
+                            </div>
+                        )}
+
+                        {/* Past event message */}
+                        {isPastEvent && (
+                            <div className="p-4 bg-muted rounded-lg">
+                                <p className="text-center text-muted-foreground font-medium">This event has ended</p>
                             </div>
                         )}
                     </div>

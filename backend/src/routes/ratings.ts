@@ -74,6 +74,36 @@ router.post('/users/:userId/ratings', authorize(), async (req: AuthenticatedRequ
             return;
         }
 
+        // 1. Check event exists and is in the past
+        const event = await prisma.event.findUnique({
+            where: { id: eventId },
+            select: { date: true, hostId: true }
+        });
+        if (!event) {
+            res.status(404).json({ message: 'Event not found.' });
+            return;
+        }
+        if (event.date > new Date()) {
+            res.status(400).json({ message: 'You can only rate users for events that have already occurred.' });
+            return;
+        }
+
+        // 2. Check both rater and rated user attended (or hosted) the event
+        // Host is always allowed to rate and be rated for their event
+        const attendees = await prisma.attendee.findMany({
+            where: { eventId },
+            select: { userId: true }
+        });
+        const attendeeIds = attendees.map(a => a.userId);
+        const raterIsHost = raterUserId === event.hostId;
+        const ratedIsHost = ratedUserId === event.hostId;
+        const raterIsAttendee = attendeeIds.includes(raterUserId);
+        const ratedIsAttendee = attendeeIds.includes(ratedUserId);
+        if (!( (raterIsHost && ratedIsAttendee) || (ratedIsHost && raterIsAttendee) || (raterIsAttendee && ratedIsAttendee) )) {
+            res.status(400).json({ message: 'Both users must have attended (or hosted) the event to rate each other.' });
+            return;
+        }
+
         const newRating = await prisma.rating.create({
             data: {
                 rating,
@@ -132,6 +162,9 @@ router.get('/users/:userId/ratings', authorize(), async (req: AuthenticatedReque
             include: {
                 raterUser: { // Information about the user who gave the rating
                     select: { id: true, firstName: true, lastName: true, profilePicture: true }
+                },
+                event: { // Information about the event for which the rating was given
+                    select: { id: true, title: true, date: true }
                 }
                 // Optionally, do not include ratedUser here as it's redundant (it's the user whose ratings are being fetched)
             },
@@ -191,6 +224,55 @@ router.get('/users/:userId/ratings/average', authorize(), async (req: Authentica
     } catch (error) {
         console.error('Error fetching average rating for user:', error);
         res.status(500).json({ message: 'Failed to fetch average rating.' });
+    }
+});
+
+// GET: Get all ratings given by a specific user
+router.get('/users/:userId/ratings/given', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+    // Validate userId param
+    let params: UserIdParam;
+    try {
+        params = userIdParamSchema.parse(req.params);
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: `Invalid parameter: ${errorMessage}` });
+            return;
+        }
+        throw err;
+    }
+    const { userId: raterUserId } = params;
+
+    try {
+        // Check if the user exists
+        const userExists = await prisma.user.findUnique({
+            where: { id: raterUserId },
+            select: { id: true }
+        });
+        if (!userExists) {
+            res.status(404).json({ message: 'User not found.' });
+            return;
+        }
+
+        const ratingsGiven = await prisma.rating.findMany({
+            where: { raterUserId },
+            include: {
+                ratedUser: { // Information about the user who received the rating
+                    select: { id: true, firstName: true, lastName: true, profilePicture: true }
+                },
+                event: { // Information about the event for which the rating was given
+                    select: { id: true, title: true, date: true }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc' // Show newest ratings first
+            }
+        });
+
+        res.status(200).json(ratingsGiven);
+    } catch (error) {
+        console.error('Error fetching ratings given by user:', error);
+        res.status(500).json({ message: 'Failed to fetch ratings given.' });
     }
 });
 

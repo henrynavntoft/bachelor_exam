@@ -11,7 +11,8 @@ export default function HostProfilePage() {
                 {(data) => (
                     <HostDashboard
                         currentUser={data.currentUser}
-                        events={data.events}
+                        upcomingEvents={data.upcomingEvents}
+                        pastEvents={data.pastEvents}
                         isCreating={data.isCreating}
                         selectedEventId={data.selectedEventId}
                         setIsCreating={data.setIsCreating}

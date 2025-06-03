@@ -15,20 +15,23 @@ router.get('/', async (req: Request, res: Response) => {
     try {
         const limit = parseInt(req.query.limit as string) || 6; // Default to 6 items per page
         const cursor = req.query.cursor as string | undefined; // Cursor for pagination
+        const includePast = req.query.includePast === 'true'; // Include past events if requested
 
         // Get today's date with time set to start of day
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         // Query parameters for filtering (can be extended later)
-        const where = {
+        const where: Prisma.EventWhereInput = {
             isDeleted: false,
-            // Filter out events with dates earlier than today
-            date: {
-                gte: today
-            }
-            // Add more filters as needed
         };
+
+        // Only filter by date if we don't want to include past events
+        if (!includePast) {
+            where.date = {
+                gte: today
+            };
+        }
 
         // Add cursor condition if provided
         const skip = cursor ? 1 : 0; // Skip the cursor item if we have one
@@ -39,7 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
             take: limit,
             skip,
             cursor: cursorObj,
-            orderBy: { date: 'asc' }, // Order by date ascending (upcoming events first)
+            orderBy: { date: includePast ? 'desc' : 'asc' }, // Order by date descending if including past events, ascending otherwise
             include: {
                 host: {
                     select: {
@@ -390,6 +393,40 @@ router.delete('/:id/attend', authorize(['GUEST']), async (req: AuthenticatedRequ
     } catch (error) {
         console.error('Error cancelling RSVP:', error);
         res.status(500).json({ message: 'Error cancelling RSVP' });
+    }
+});
+
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Get all attendees for an event (including host)
+router.get('/:eventId/attendees', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+    const eventId = req.params.eventId;
+    try {
+        // Get event and host
+        const event = await prisma.event.findUnique({
+            where: { id: eventId, isDeleted: false },
+            select: { hostId: true, host: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } }
+        });
+        if (!event) {
+            res.status(404).json({ message: 'Event not found.' });
+            return;
+        }
+        // Get attendees
+        const attendees = await prisma.attendee.findMany({
+            where: { eventId },
+            include: { user: { select: { id: true, firstName: true, lastName: true, profilePicture: true } } }
+        });
+        // Format attendees
+        const attendeeUsers = attendees.map(a => ({ ...a.user, isHost: a.user.id === event.hostId }));
+        // Add host if not already in attendees
+        const hostInAttendees = attendeeUsers.some(u => u.id === event.hostId);
+        let allUsers = attendeeUsers;
+        if (!hostInAttendees && event.host) {
+            allUsers = [{ ...event.host, isHost: true }, ...attendeeUsers];
+        }
+        res.status(200).json(allUsers);
+    } catch (error) {
+        console.error('Error fetching attendees for event:', error);
+        res.status(500).json({ message: 'Failed to fetch attendees.' });
     }
 });
 

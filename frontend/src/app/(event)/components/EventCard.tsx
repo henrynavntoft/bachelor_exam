@@ -33,6 +33,7 @@ interface EventCardProps {
     isClickable?: boolean;
     isAdminView?: boolean;
     showAttendControls?: boolean;
+    isPastEvent?: boolean;
 }
 
 export function EventCard({
@@ -46,25 +47,28 @@ export function EventCard({
     className = '',
     isClickable = true,
     isAdminView = false,
+    isPastEvent = false,
 }: EventCardProps) {
     const router = useRouter();
 
     const isHost = currentUser?.id === event.hostId;
     const isAdmin = (currentUser?.role === Role.ADMIN) || isAdminView;
 
-    const canEdit = isHost && onEdit;
-    const showAdminDelete = isAdmin && !isHost && onDelete;
-    const showHostDelete = isHost && onDelete;
+    const canEdit = isHost && onEdit && !isPastEvent;
+    const showAdminDelete = isAdmin && !isHost && onDelete && !isPastEvent;
+    const showHostDelete = isHost && onDelete && !isPastEvent;
 
     const handleCardClick = () => {
-        if (isClickable) {
+        if (isClickable && !isPastEvent) {
+            router.push(`/events/${event.id}`);
+        } else if (isPastEvent && isClickable) {
             router.push(`/events/${event.id}`);
         }
     };
 
     return (
         <CustomCard
-            className={`overflow-hidden border-0 ${isClickable ? 'cursor-pointer' : ''} ${className}`}
+            className={`overflow-hidden border-0 ${isClickable ? 'cursor-pointer' : ''} ${isPastEvent ? 'opacity-80' : ''} ${className}`}
             onClick={handleCardClick}
         >
             <CardContent className="p-0">
@@ -74,12 +78,26 @@ export function EventCard({
                             src={event.images[0]}
                             alt={event.title || 'Event'}
                             fill
-                            className="object-cover"
+                            className={`object-cover ${isPastEvent ? 'grayscale' : ''}`}
                         />
+                        {isPastEvent && (
+                            <div className="absolute top-2 right-2">
+                                <span className="text-white font-semibold text-xs px-2 py-1 bg-black bg-opacity-80 rounded-full">
+                                    Past Event
+                                </span>
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div className={`w-full ${featuredImageHeight} mb-2 bg-muted flex items-center justify-center`}>
+                    <div className={`relative w-full ${featuredImageHeight} mb-2 bg-muted flex items-center justify-center`}>
                         <Calendar className="h-12 w-12 text-muted-foreground" />
+                        {isPastEvent && (
+                            <div className="absolute top-2 right-2">
+                                <span className="text-white font-semibold text-xs px-2 py-1 bg-black bg-opacity-80 rounded-full">
+                                    Past Event
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
                 {showImageGallery && event.images && event.images.length > 1 && (

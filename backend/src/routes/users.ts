@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { authorize, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { ZodError, ZodIssue } from 'zod';
-import { userIdParamSchema, UserIdParam, updateUserSchema, UpdateUserInput } from '../schemas/userSchema';
+import { userIdParamSchema, updateUserSchema, UpdateUserInput } from '../schemas/userSchema';
 
 const router = Router();
 
@@ -22,10 +22,9 @@ router.get('/', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Res
 //////////////////////////////////////////////////////////////////////////////////
 // GET: Get a single user by ID
 router.get('/:id', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: Response) => {
-    // Validate ID param
-    let params: UserIdParam;
+    let userId: string;
     try {
-        params = userIdParamSchema.parse(req.params);
+        userId = userIdParamSchema.parse({ userId: req.params.id }).userId;
     } catch (err: unknown) {
         if (err instanceof ZodError) {
             const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
@@ -34,10 +33,8 @@ router.get('/:id', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: 
         }
         throw err;
     }
-    const { id } = params;
-
     try {
-        const user = await prisma.user.findUnique({ where: { id } });
+        const user = await prisma.user.findUnique({ where: { id: userId } });
         if (!user) {
             res.status(404).json({ message: 'User not found' });
             return;
@@ -53,10 +50,9 @@ router.get('/:id', authorize(['ADMIN']), async (req: AuthenticatedRequest, res: 
 //////////////////////////////////////////////////////////////////////////////////
 // PUT: Update a user
 router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedRequest, res: Response) => {
-    // Validate ID param
-    let params: UserIdParam;
+    let userId: string;
     try {
-        params = userIdParamSchema.parse(req.params);
+        userId = userIdParamSchema.parse({ userId: req.params.id }).userId;
     } catch (err: unknown) {
         if (err instanceof ZodError) {
             const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
@@ -65,7 +61,6 @@ router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReques
         }
         throw err;
     }
-    const { id } = params;
 
     // Validate body
     let body: UpdateUserInput;
@@ -89,7 +84,7 @@ router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReques
 
     try {
         const updatedUser = await prisma.user.update({
-            where: { id },
+            where: { id: userId },
             data: {
                 firstName,
                 lastName,
@@ -109,10 +104,9 @@ router.put('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReques
 //////////////////////////////////////////////////////////////////////////////////
 // DELETE: Delete a user
 router.delete('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedRequest, res: Response) => {
-    // Validate ID param
-    let params: UserIdParam;
+    let userId: string;
     try {
-        params = userIdParamSchema.parse(req.params);
+        userId = userIdParamSchema.parse({ userId: req.params.id }).userId;
     } catch (err: unknown) {
         if (err instanceof ZodError) {
             const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
@@ -121,12 +115,11 @@ router.delete('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReq
         }
         throw err;
     }
-    const { id } = params;
 
     try {
         // First check if the user is an admin
         const user = await prisma.user.findUnique({
-            where: { id },
+            where: { id: userId },
             select: { role: true }
         });
 
@@ -141,7 +134,7 @@ router.delete('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReq
         }
 
         await prisma.user.update({
-            where: { id },
+            where: { id: userId },
             data: { isDeleted: true }
         });
         res.status(200).json({ message: 'User deleted successfully' });
@@ -152,5 +145,50 @@ router.delete('/:id', authorize(['ADMIN', 'SELF']), async (req: AuthenticatedReq
     }
 });
 
+//////////////////////////////////////////////////////////////////////////////////
+// GET: Get all past events (hosted or attended) for a user
+router.get('/:id/past-events', authorize(), async (req: AuthenticatedRequest, res: Response) => {
+    let userId: string;
+    try {
+        userId = userIdParamSchema.parse({ userId: req.params.id }).userId;
+    } catch (err: unknown) {
+        if (err instanceof ZodError) {
+            const errorMessage = err.errors.map((issue: ZodIssue) => issue.message).join(', ');
+            res.status(400).json({ error: errorMessage });
+            return;
+        }
+        throw err;
+    }
+    try {
+        // Get current date
+        const now = new Date();
+        // Find events where user is host and date is in the past
+        const hostedEvents = await prisma.event.findMany({
+            where: {
+                hostId: userId,
+                date: { lt: now },
+                isDeleted: false
+            },
+            include: { attendees: true }
+        });
+        // Find events where user is an attendee and date is in the past
+        const attendedEvents = await prisma.attendee.findMany({
+            where: {
+                userId,
+                event: { date: { lt: now }, isDeleted: false }
+            },
+            include: { event: { include: { attendees: true } } }
+        });
+        // Format attended events to match hostedEvents structure
+        const attendedEventsFormatted = attendedEvents.map(a => ({ ...a.event, role: 'ATTENDEE' }));
+        const hostedEventsFormatted = hostedEvents.map(e => ({ ...e, role: 'HOST' }));
+        // Merge and sort by date descending
+        const allPastEvents = [...hostedEventsFormatted, ...attendedEventsFormatted].sort((a, b) => b.date.getTime() - a.date.getTime());
+        res.status(200).json(allPastEvents);
+    } catch (error) {
+        console.error('Error fetching past events for user:', error);
+        res.status(500).json({ message: 'Failed to fetch past events.' });
+    }
+});
 
 export default router;

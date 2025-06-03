@@ -11,7 +11,8 @@ export default function GuestProfilePage() {
                 {(data) => (
                     <GuestDashboard
                         currentUser={data.currentUser}
-                        rsvpedEvents={data.rsvpedEvents}
+                        upcomingEvents={data.upcomingEvents}
+                        pastEvents={data.pastEvents}
                         isLoadingEvents={data.isLoadingEvents}
                     />
                 )}
