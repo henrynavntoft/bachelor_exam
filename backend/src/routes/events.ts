@@ -17,9 +17,8 @@ router.get('/', async (req: Request, res: Response) => {
         const cursor = req.query.cursor as string | undefined; // Cursor for pagination
         const includePast = req.query.includePast === 'true'; // Include past events if requested
 
-        // Get today's date with time set to start of day
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Get current date and time 
+        const now = new Date();
 
         // Query parameters for filtering (can be extended later)
         const where: Prisma.EventWhereInput = {
@@ -29,7 +28,7 @@ router.get('/', async (req: Request, res: Response) => {
         // Only filter by date if we don't want to include past events
         if (!includePast) {
             where.date = {
-                gte: today
+                gte: now  // Use current date/time
             };
         }
 
