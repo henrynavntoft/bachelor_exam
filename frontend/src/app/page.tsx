@@ -42,7 +42,7 @@ export default function Home() {
           variant="outline"
           onClick={() => window.location.reload()}
         >
-          Try again
+          Try again!
         </Button>
       </div>
     );
