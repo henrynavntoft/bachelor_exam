@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  poweredByHeader: false, // Hide X-Powered-By header
   images: {
     remotePatterns: [
       {
