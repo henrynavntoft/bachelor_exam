@@ -34,7 +34,14 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <Script src="https://www.googletagmanager.com/gtag/js?id=G-7SGXZXJ94Q" strategy="afterInteractive" />
-        <Script src="/gtag.js" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){window.dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-7SGXZXJ94Q');
+          `}
+        </Script>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <QueryProvider>
