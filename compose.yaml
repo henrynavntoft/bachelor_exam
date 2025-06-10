@@ -2,8 +2,8 @@ services:
   frontend:
     container_name: frontend
     volumes:
-    - ./frontend:/app:cached
-    - node_modules_frontend:/app/node_modules
+      - ./frontend:/app:cached
+      - node_modules_frontend:/app/node_modules
     build:
       context: ./frontend
       dockerfile: frontend.dockerfile
@@ -19,8 +19,8 @@ services:
   backend:
     container_name: backend
     volumes:
-    - ./backend:/app:cached
-    - node_modules_backend:/app/node_modules
+      - ./backend:/app:cached
+      - node_modules_backend:/app/node_modules
     build:
       context: ./backend
       dockerfile: backend.dockerfile
@@ -38,8 +38,10 @@ services:
     container_name: db
     image: postgres:17
     restart: unless-stopped
-    env_file:
-      - ./backend/.env.${RTE}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -74,7 +76,6 @@ networks:
     driver: bridge
   external-network:
     driver: bridge
-
 
 volumes:
   node_modules_frontend:
