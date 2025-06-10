@@ -143,7 +143,7 @@ router.post('/signup', async (req: Request, res, next) => {
             return;
         }
 
-        const hashed = await bcrypt.hash(password, 14);
+        const hashed = await bcrypt.hash(password, 10);
         const user = await prisma.user.create({
             data: { firstName, lastName, email, hashedPassword: hashed, role, isVerified: false },
         });
@@ -365,7 +365,7 @@ router.post('/reset-password', async (req: Request, res: Response, next: NextFun
             return;
         }
 
-        const hashedPassword = await bcrypt.hash(password, 14);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         await prisma.user.update({
             where: { id: resetToken.userId },
