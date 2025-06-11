@@ -58,6 +58,14 @@ export function useEvents(limit = 6) {
         },
         getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: undefined,
+        
+        // Caching configuration
+        staleTime: 3 * 60 * 1000,     // 3 minutes - events don't change super frequently
+        gcTime: 15 * 60 * 1000,       // 15 minutes - keep events in cache longer since they're commonly accessed
+        
+        // Additional optimizations
+        refetchOnWindowFocus: false,   // Don't refetch when user switches browser tabs
+        retry: 1,                      // Only retry once on failure
     });
 
     // Safely extract all events

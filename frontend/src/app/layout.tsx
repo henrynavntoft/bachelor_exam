@@ -46,7 +46,6 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}>
         <QueryProvider>
           <AuthProvider>
-
             <ClientOnly>
               <ThemeProvider
                 attribute="class"
@@ -56,15 +55,12 @@ export default function RootLayout({
               >
                 <Header />
                 <main className="p-6 flex-grow mb-4 min-h-screen">
-
                   {children}
-
                 </main>
                 <Footer />
                 <Toaster />
               </ThemeProvider>
             </ClientOnly>
-
           </AuthProvider>
         </QueryProvider>
       </body>
