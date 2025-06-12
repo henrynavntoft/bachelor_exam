@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Map from "./Map";
-import { Event } from "@/hooks/useEvents";
+import { Event } from "@/lib/types/event";
 
 interface MobileMapProps {
     isVisible: boolean;
