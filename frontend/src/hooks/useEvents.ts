@@ -8,7 +8,7 @@ interface EventsResponse {
     nextCursor?: string;
 }
 
-export function useEvents(limit = 6) {
+export function useEvents(limit = 4) {
     const query = useInfiniteQuery<EventsResponse>({
         queryKey: ["events"],
         queryFn: async ({ pageParam }) => {

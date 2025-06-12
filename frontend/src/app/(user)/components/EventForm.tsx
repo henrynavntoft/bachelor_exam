@@ -25,133 +25,6 @@ interface EventFormProps {
     isEditing?: boolean;
 }
 
-// Reusable form field components
-const TextFormField = ({ control, name, label, placeholder, required = false }: any) => (
-    <FormField
-        control={control}
-        name={name}
-        render={({ field }) => (
-            <FormItem>
-                <FormLabel>{label} {required && "*"}</FormLabel>
-                <FormControl>
-                    <Input placeholder={placeholder} {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-        )}
-    />
-);
-
-const TextareaFormField = ({ control, name, label, placeholder }: any) => (
-    <FormField
-        control={control}
-        name={name}
-        render={({ field }) => (
-            <FormItem>
-                <FormLabel>{label}</FormLabel>
-                <FormControl>
-                    <Textarea placeholder={placeholder} {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-        )}
-    />
-);
-
-const NumberFormField = ({ control, name, label, placeholder }: any) => (
-    <FormField
-        control={control}
-        name={name}
-        render={({ field }) => (
-            <FormItem>
-                <FormLabel>{label}</FormLabel>
-                <FormControl>
-                    <Input
-                        type="number"
-                        placeholder={placeholder}
-                        {...field}
-                        value={field.value === null || field.value === undefined ? '' : field.value}
-                        onChange={e => {
-                            const value = e.target.value;
-                            field.onChange(value === '' ? null : 
-                                name === 'pricePerPerson' ? parseFloat(value) : parseInt(value, 10));
-                        }}
-                    />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-        )}
-    />
-);
-
-const DateTimeFormField = ({ control, name, label }: any) => (
-    <FormField
-        control={control}
-        name={name}
-        render={({ field }) => (
-            <FormItem>
-                <FormLabel>{label}</FormLabel>
-                <FormControl>
-                    <Input type="datetime-local" {...field} />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-        )}
-    />
-);
-
-const SelectFormField = ({ control, name, label, options, placeholder }: any) => (
-    <FormField
-        control={control}
-        name={name}
-        render={({ field }) => (
-            <FormItem>
-                <FormLabel>{label}</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder={placeholder} />
-                        </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                        {options.map((option: any) => (
-                            <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
-        )}
-    />
-);
-
-const FileFormField = ({ control, name, label, accept, multiple = false }: any) => (
-    <FormField
-        control={control}
-        name={name}
-        render={({ field }) => (
-            <FormItem>
-                <FormLabel>{label}</FormLabel>
-                <FormControl>
-                    <Input
-                        type="file"
-                        multiple={multiple}
-                        accept={accept}
-                        onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            field.onChange(multiple ? files : files[0]);
-                        }}
-                        className="cursor-pointer"
-                    />
-                </FormControl>
-                <FormMessage />
-            </FormItem>
-        )}
-    />
-);
-
 export function EventForm({
     initialData,
     onSubmit,
@@ -193,10 +66,7 @@ export function EventForm({
         } as ExtendedEventFormData);
     };
 
-    const eventTypeOptions = eventTypes.map(type => ({
-        value: type,
-        label: type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()
-    }));
+
 
     return (
         <Form {...form}>
@@ -204,23 +74,46 @@ export function EventForm({
                 className="flex flex-col gap-4"
                 onSubmit={form.handleSubmit(handleSubmit)}
             >
-                <TextFormField
+                <FormField
                     control={form.control}
                     name="title"
-                    label="Title"
-                    required={true}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Title *</FormLabel>
+                            <FormControl>
+                                <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
-
-                <TextareaFormField
+                
+                <FormField
                     control={form.control}
                     name="description"
-                    label="Description"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                                <Textarea {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
-
-                <DateTimeFormField
+                
+                <FormField
                     control={form.control}
                     name="date"
-                    label="Date"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Date</FormLabel>
+                            <FormControl>
+                                <Input type="datetime-local" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
 
                 <FormField
@@ -262,34 +155,95 @@ export function EventForm({
                     </div>
                 )}
 
-                <FileFormField
+                <FormField
                     control={form.control}
                     name="newImages"
-                    label={isEditing ? 'Add Images' : 'Images'}
-                    accept=".jpg,.jpeg,.png,.webp"
-                    multiple={true}
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>{isEditing ? 'Add Images' : 'Images'}</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="file"
+                                    multiple
+                                    accept=".jpg,.jpeg,.png,.webp"
+                                    onChange={(e) => {
+                                        const files = Array.from(e.target.files || []);
+                                        field.onChange(files);
+                                    }}
+                                    className="cursor-pointer"
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
 
-                <NumberFormField
+                <FormField
                     control={form.control}
                     name="pricePerPerson"
-                    label="Price Per Person"
-                    placeholder="50"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Price Per Person</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="50"
+                                    {...field}
+                                    value={field.value === null || field.value === undefined ? '' : field.value}
+                                    onChange={e => field.onChange(e.target.value === '' ? null : parseFloat(e.target.value))}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
 
-                <SelectFormField
+                <FormField
                     control={form.control}
                     name="eventType"
-                    label="Event Type"
-                    options={eventTypeOptions}
-                    placeholder="Select an event type"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Event Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select an event type" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {eventTypes.map(type => (
+                                        <SelectItem key={type} value={type}>
+                                            {type.charAt(0).toUpperCase() + type.slice(1).toLowerCase()}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
 
-                <NumberFormField
+                <FormField
                     control={form.control}
                     name="capacity"
-                    label="Capacity"
-                    placeholder="6"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Capacity</FormLabel>
+                            <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="6"
+                                    {...field}
+                                    value={field.value === null || field.value === undefined ? '' : field.value}
+                                    onChange={e => {
+                                        const value = e.target.value;
+                                        field.onChange(value === '' ? null : parseInt(value, 10));
+                                    }}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
                 />
 
                 <div className="flex gap-2">
