@@ -20,7 +20,15 @@ const eventTypes = ["BREAKFAST", "LUNCH", "DINNER", "SPECIAL"] as const;
 export const eventSchema = z.object({
     title: z.string().min(1, 'Title is required'),
     description: z.string().min(1, 'Description is required'),
-    date: z.string().min(1, 'Date is required'), // Keep as string for datetime-local input
+    date: z.string().min(1, 'Date is required')
+        .refine(
+            (dateString) => {
+                const eventDate = new Date(dateString);
+                const now = new Date();
+                return eventDate > now;
+            },
+            'Event date must be in the future'
+        ), 
     location: z.string().min(1, 'Location is required'),
     pricePerPerson: z.coerce.number().positive({ message: "Price must be a positive number" }).optional().nullable(), // Added pricePerPerson
     eventType: z.enum(eventTypes, { required_error: 'Event type is required' }), // Added eventType

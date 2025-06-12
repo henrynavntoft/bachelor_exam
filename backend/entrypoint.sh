@@ -11,9 +11,6 @@ npx prisma generate && npx prisma migrate deploy
 
 
 if [ "$RTE" = "prod" ]; then
-  echo "== Running Prisma Migrate =="
-  npx prisma migrate deploy
-
   echo "== Building TypeScript =="
   npx tsc
 

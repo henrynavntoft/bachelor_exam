@@ -254,7 +254,7 @@ export function EventDetail({
                             </div>
                         )}
 
-                        {/* Action buttons */}
+                        {/* Action buttons for guests */}
                         {showActions && isGuest && !isPastEvent && (
                             <div className="flex flex-col gap-4">
                                 {isUserAttending ? (
@@ -299,31 +299,31 @@ export function EventDetail({
                                         {"Attend Event"}
                                     </Button>
                                 )}
-
-                                {/* Chat button - Only show for attendees */}
-                                {isUserAttending && !isPastEvent && (
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <Button
-                                                className="w-full sm:w-auto"
-                                                size="lg"
-                                            >
-                                                <MessageCircle className="mr-2 h-5 w-5" />
-                                                Open Chat
-                                            </Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="h-screen w-full border-none lg:max-w-[70%] lg:h-[90%]">
-                                            <DialogHeader>
-                                                <DialogTitle>{event.title}</DialogTitle>
-                                            </DialogHeader>
-
-                                            <div className="flex-1 overflow-hidden h-full">
-                                                <Chat eventId={event.id} />
-                                            </div>
-                                        </DialogContent>
-                                    </Dialog>
-                                )}
                             </div>
+                        )}
+
+                        {/* Chat button - Show for attendees and hosts */}
+                        {(isUserAttending || user?.id === event.hostId) && !isPastEvent && (
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        className="w-full sm:w-auto"
+                                        size="lg"
+                                    >
+                                        <MessageCircle className="mr-2 h-5 w-5" />
+                                        Open Chat
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent className="h-screen w-full border-none lg:max-w-[70%] lg:h-[90%]">
+                                    <DialogHeader>
+                                        <DialogTitle>{event.title}</DialogTitle>
+                                    </DialogHeader>
+
+                                                                                <div className="flex-1 overflow-hidden h-full">
+                                                <Chat eventId={event.id} hostId={event.hostId} />
+                                            </div>
+                                </DialogContent>
+                            </Dialog>
                         )}
 
                         {/* Past event message */}

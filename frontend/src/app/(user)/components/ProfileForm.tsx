@@ -3,10 +3,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FileInput } from "@/app/(event)/components/FileInput";
-import { Label } from "@/components/ui/label";
-import Image from "next/image";
-import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { profileSchema, ProfileFormData } from "@/lib/schemas/profile.schemas";
 
@@ -21,7 +17,6 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ initialData, onSubmit, onCancel }: ProfileFormProps) {
-    const [previewImages, setPreviewImages] = useState<string[]>([]);
     const form = useForm<ProfileFormData>({
         resolver: zodResolver(profileSchema),
         defaultValues: initialData,
@@ -63,34 +58,20 @@ export function ProfileForm({ initialData, onSubmit, onCancel }: ProfileFormProp
                         <FormItem>
                             <FormLabel>Profile Picture</FormLabel>
                             <FormControl>
-                                <FileInput
+                                <Input
+                                    type="file"
                                     accept=".jpg,.jpeg,.png,.webp"
-                                    onChange={(files) => {
+                                    onChange={(e) => {
+                                        const files = Array.from(e.target.files || []);
                                         field.onChange(files[0]);
-                                        if (files[0]) {
-                                            setPreviewImages([URL.createObjectURL(files[0])]);
-                                        } else {
-                                            setPreviewImages([]);
-                                        }
                                     }}
+                                    className="cursor-pointer"
                                 />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
                     )}
                 />
-                {previewImages.length > 0 && (
-                    <div className="mb-2">
-                        <Label>Preview</Label>
-                        <Image
-                            src={previewImages[0]}
-                            alt="Profile Preview"
-                            width={100}
-                            height={100}
-                            className="rounded border"
-                        />
-                    </div>
-                )}
                 <div className="flex gap-2">
                     <Button
                         type="submit"

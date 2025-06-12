@@ -13,13 +13,15 @@ interface ChatMessageProps {
         image?: string | null;
     };
     isCurrentUser: boolean;
+    isHost: boolean;
 }
 
 export function ChatMessage({
     content,
     createdAt,
     user,
-    isCurrentUser
+    isCurrentUser,
+    isHost
 }: ChatMessageProps) {
     const userName = user.name || user.email || "Unknown";
     const displayName = isCurrentUser ? "You" : userName;
@@ -38,6 +40,16 @@ export function ChatMessage({
                 <div className="flex items-center gap-2">
                     <UserAvatar user={user} size="sm" fallback={userName?.[0]?.toUpperCase() || "?"} />
                     <span className="text-xs font-semibold">{displayName}</span>
+                    {isHost && (
+                        <span className="text-xs bg-brand/10 text-brand px-2 py-0.5 rounded-full">
+                            Host
+                        </span>
+                    )}
+                    {!isHost && !isCurrentUser && (
+                        <span className="text-xs bg-muted-foreground/10 text-muted-foreground px-2 py-0.5 rounded-full">
+                            Guest
+                        </span>
+                    )}
                 </div>
 
                 <p className="text-sm break-words">{content}</p>

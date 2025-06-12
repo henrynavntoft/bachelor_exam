@@ -29,12 +29,7 @@ export class SocketService {
         console.log('Initializing SocketService...');
 
         this.io = new SocketIOServer(httpServer, {
-            cors: {
-                origin: true, // Allow all origins - cookies will restrict this anyway
-                methods: ["GET", "POST"],
-                credentials: true, // Important for cookie passing
-            },
-            // The path is already correct in your nginx config: /socket.io/
+            // No CORS needed since we're serving through nginx reverse proxy
         });
 
         this.setupAuthMiddleware();

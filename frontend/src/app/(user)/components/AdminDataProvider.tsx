@@ -25,7 +25,7 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
     const { isAuthenticated, isAdmin, isLoading: authLoading } = useAuth();
     const queryClient = useQueryClient();
 
-    // Fetch all users
+    // Fetch users
     const {
         data: users = [],
         isLoading: usersLoading,
@@ -33,27 +33,16 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
     } = useQuery<User[]>({
         queryKey: ['users'],
         queryFn: async () => {
-            try {
-                const res = await axiosInstance.get(routes.users.all, { withCredentials: true });
-                // Handle both cases - direct array or nested inside an object
-                const usersData = res.data.users || res.data;
-
-                // Ensure we always return an array
-                if (Array.isArray(usersData)) {
-                    return usersData;
-                } else {
-                    console.error('Users data is not an array:', usersData);
-                    return [];
-                }
-            } catch (error) {
-                console.error('Error fetching users:', error);
-                return [];
-            }
+            const res = await axiosInstance.get(routes.users.all, { withCredentials: true });
+            return res.data.users || res.data;
         },
         enabled: isAuthenticated && isAdmin,
+        staleTime: 5 * 60 * 1000, // 5 minutes - users don't change frequently
+        gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
+        refetchOnWindowFocus: false,
     });
 
-    // Fetch all events
+    // Fetch events
     const {
         data: events = [],
         isLoading: eventsLoading,
@@ -61,47 +50,32 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
     } = useQuery<Event[]>({
         queryKey: ['admin-events'],
         queryFn: async () => {
-            try {
-                const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
-                // Make sure we're handling the response correctly - check if events is nested
-                const eventsData = res.data.events || res.data;
-
-                // Ensure we always return an array
-                if (Array.isArray(eventsData)) {
-                    return eventsData;
-                } else {
-                    console.error('Events data is not an array:', eventsData);
-                    return [];
-                }
-            } catch (error) {
-                console.error('Error fetching events:', error);
-                return [];
-            }
+            const res = await axiosInstance.get(routes.events.all, { withCredentials: true });
+            return res.data.events || res.data;
         },
         enabled: isAuthenticated && isAdmin,
+        staleTime: 2 * 60 * 1000, // 2 minutes - events change more frequently
+        gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
+        refetchOnWindowFocus: false,
     });
 
-    // Delete user mutation
+    // Delete user
     const deleteUserMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await axiosInstance.delete(routes.users.delete(id), { withCredentials: true });
-        },
+        mutationFn: (id: string) => axiosInstance.delete(routes.users.delete(id), { withCredentials: true }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
         }
     });
 
-    // Delete event mutation
+    // Delete event
     const deleteEventMutation = useMutation({
-        mutationFn: async (id: string) => {
-            await axiosInstance.delete(routes.events.delete(id), { withCredentials: true });
-        },
+        mutationFn: (id: string) => axiosInstance.delete(routes.events.delete(id), { withCredentials: true }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-events'] });
         }
     });
 
-    // Reactivate user mutation
+    // Reactivate user
     const reactivateUserMutation = useMutation({
         mutationFn: async (userId: string) => {
             const user = users.find(u => u.id === userId);
@@ -109,38 +83,21 @@ export function AdminDataProvider({ children }: AdminDataProviderProps) {
 
             return axiosInstance.put(
                 routes.users.update(userId),
-                {
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    email: user.email,
-                    role: user.role,
-                    isDeleted: false
-                },
+                { ...user, isDeleted: false },
                 { withCredentials: true }
             );
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
-        },
+        }
     });
 
-    // Aggregate loading state
     const isLoading = authLoading || usersLoading || eventsLoading;
-
-    // Aggregate error state
     const error = usersError || eventsError || null;
 
-    if (isLoading) {
-        return <LoadingSpinner />;
-    }
-
-    if (error) {
-        return <div className="text-center mt-8 text-destructive">Failed to load data.</div>;
-    }
-
-    if (!isAuthenticated || !isAdmin) {
-        return null;
-    }
+    if (isLoading) return <LoadingSpinner />;
+    if (error) return <div className="text-center mt-8 text-destructive">Failed to load data.</div>;
+    if (!isAuthenticated || !isAdmin) return null;
 
     return (
         <>

@@ -10,7 +10,6 @@ import uploadRoute from './routes/upload';
 import ratingsRouter from './routes/ratings';
 import { authLimiter, generalLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
-import { corsMiddleware } from './middleware/corsMiddleware';
 import { loggingMiddleware } from './middleware/loggingMiddleware';
 
 dotenv.config({ path: './.env' });
@@ -24,7 +23,6 @@ app.use(generalLimiter);
 app.use(loggingMiddleware);
 app.use(cookieParser());
 app.use(express.json());
-app.use(corsMiddleware);
 
 
 app.get('/', (req: Request, res: Response) => {

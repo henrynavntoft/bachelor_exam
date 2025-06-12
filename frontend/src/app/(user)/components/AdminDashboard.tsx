@@ -7,6 +7,7 @@ import { UserCard } from '@/app/(user)/components/UserCard';
 import { EventCard } from '@/app/(event)/components/EventCard';
 import { UserProfileHeader } from './UserProfileHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AnalyticsCard } from '@/app/components/global/AnalyticsCard';
 import { 
     Users, 
     Calendar, 
@@ -127,57 +128,32 @@ export function AdminDashboard({
 
             {/* Analytics Overview */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs md:text-sm font-medium">Total Users</CardTitle>
-                        <Users className="h-4 w-4 text-brand" />
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                        <div className="text-xl md:text-2xl font-bold">{analytics.totalUsers}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {analytics.activeUsers} active, {analytics.deletedUsers} deleted
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs md:text-sm font-medium">Total Events</CardTitle>
-                        <Calendar className="h-4 w-4 text-brand" />
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                        <div className="text-xl md:text-2xl font-bold">{analytics.totalEvents}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Events created by hosts
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs md:text-sm font-medium">Active Users</CardTitle>
-                        <UserCheck className="h-4 w-4 text-green-500" />
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                        <div className="text-xl md:text-2xl font-bold text-green-600">{analytics.activeUsers}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Currently active accounts
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-xs md:text-sm font-medium">Hosts</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-brand" />
-                    </CardHeader>
-                    <CardContent className="pb-3">
-                        <div className="text-xl md:text-2xl font-bold">{analytics.hostCount}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Event organizers
-                        </p>
-                    </CardContent>
-                </Card>
+                <AnalyticsCard
+                    title="Total Users"
+                    value={analytics.totalUsers}
+                    description={`${analytics.activeUsers} active, ${analytics.deletedUsers} deleted`}
+                    icon={Users}
+                />
+                <AnalyticsCard
+                    title="Total Events"
+                    value={analytics.totalEvents}
+                    description="Events created by hosts"
+                    icon={Calendar}
+                />
+                <AnalyticsCard
+                    title="Active Users"
+                    value={analytics.activeUsers}
+                    description="Currently active accounts"
+                    icon={UserCheck}
+                    iconColor="text-green-500"
+                    valueColor="text-green-600"
+                />
+                <AnalyticsCard
+                    title="Hosts"
+                    value={analytics.hostCount}
+                    description="Event organizers"
+                    icon={TrendingUp}
+                />
             </div>
 
             {/* Charts Row */}

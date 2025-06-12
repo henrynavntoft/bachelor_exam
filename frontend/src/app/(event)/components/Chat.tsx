@@ -8,10 +8,11 @@ import { ChatMessage } from '@/app/(event)/components/ChatMessage';
 
 interface ChatProps {
     eventId: string;
+    hostId: string;
     onClose?: () => void;
 }
 
-export default function Chat({ eventId, onClose }: ChatProps) {
+export default function Chat({ eventId, hostId, onClose }: ChatProps) {
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const { messages, sendMessage, loading, error, isConnected } = useEventChat(eventId);
     const [text, setText] = useState('');
@@ -154,6 +155,7 @@ export default function Chat({ eventId, onClose }: ChatProps) {
                             createdAt={msg.createdAt}
                             user={msg.user}
                             isCurrentUser={msg.user.id === user?.id || msg.user.email === user?.email}
+                            isHost={msg.user.id === hostId}
                         />
                     ))
                 )}
